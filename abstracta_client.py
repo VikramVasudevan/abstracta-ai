@@ -37,11 +37,13 @@ class AbstractaClient:
         }
 
         payload = {
-            "where": f"dqdb_app_sys_no = (select app_sys_no from dq_app where app_name = '{app}' and org_sys_no = (select org_sys_no from dq_org where org_name = '{org}'))",
+            "where": f"dqdb_app_sys_no = (select app_sys_no from dq_apps where app_name = '{app}' and app_org_sys_no = (select org_sys_no from dq_org where org_name = '{org}'))",
             "from" : 1,
             "to" : 100,
             "columns" : "dqdb_db_name",
-            "lean" : True
+            "lean" : True,
+            "forUser" : os.getenv("ABSTRACTA_FOR_USER"),
+            "forUserSecret" : os.getenv("ABSTRACTA_FOR_USER_SECRET")
         }
 
         response = requests.post(request_url, headers=headers, json=payload)
@@ -52,6 +54,7 @@ class AbstractaClient:
             raise Exception(f"Failed to get data sources: {response.status_code} {response.text}")
 
     def get_organizations(self, access_token: str):
+        print("Getting organizations")
         request_url = self.generate_system_api_url("dq_org", "0.0.0")
 
         headers = {
@@ -75,19 +78,24 @@ class AbstractaClient:
     
     def get_applications(self, access_token: str, org: str):
         print(f"Getting applications for org: {org}")
-        request_url = self.generate_system_api_url("dq_apps", "0.0.0")
+        request_url = self.generate_system_api_url("dq_apps", "2.0.0")
 
+        print(request_url)
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
 
         payload = {
             "where": f"app_org_sys_no = (select org_sys_no from dq_org where org_name = '{org}')",
-            "from" : 1,
+            "from" : 0,
             "to" : 100,
             "columns" : "app_name",
-            "lean" : True
+            "lean" : True,
+            "forUser" : os.getenv("ABSTRACTA_FOR_USER"),
+            "forUserSecret" : os.getenv("ABSTRACTA_FOR_USER_SECRET")
         }
+
+        print(payload)
 
         response = requests.post(request_url, headers=headers, json=payload)
         if response.status_code == 200:
