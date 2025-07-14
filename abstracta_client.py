@@ -1,10 +1,12 @@
 import requests
 import os
 from dotenv import load_dotenv
+from api_builder_agent import APIBuilderPayload
 
 load_dotenv(override=True)
 
 ABSTRACTA_API_URL="http://localhost:8080/rest/data/queryv2"
+ABSTRACTA_METADATA_API_URL="http://localhost:8080/rest/metadata"
 
 class AbstractaClient:
     def perform_auth(self):
@@ -66,7 +68,9 @@ class AbstractaClient:
             "from" : 1,
             "to" : 100,
             "columns" : "org_name",
-            "lean" : True
+            "lean" : True,
+            "forUser" : os.getenv("ABSTRACTA_FOR_USER"),
+            "forUserSecret" : os.getenv("ABSTRACTA_FOR_USER_SECRET")
         }
 
         response = requests.post(request_url, headers=headers, json=payload)
@@ -103,3 +107,19 @@ class AbstractaClient:
             return [item["app_name"] for item in data]
         else:
             raise Exception(f"Failed to get applications: {response.status_code} {response.text}")
+
+    def create_api(self, access_token: str, prmServiceInfo: APIBuilderPayload):
+        print("Creating API ...", prmServiceInfo.model_dump())
+        url = f"{ABSTRACTA_METADATA_API_URL}/{prmServiceInfo.orgName}/{prmServiceInfo.appName}/connectors/{prmServiceInfo.connectorType}/find/{prmServiceInfo.datasourceName}/services/add"
+        print(url)
+
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+
+        response = requests.post(url, headers=headers, json=prmServiceInfo.model_dump())
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to create API: {response.status_code} {response.text}")
