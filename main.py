@@ -126,7 +126,7 @@ def render():
         submitBtn = gr.Button("Generate API", scale=0, variant="primary")
         submitBtn.click(
             gatherInfo,
-            inputs=[requirements, example1, example2],
+            inputs=[requirements],
             outputs=[status_message, api_url, web_url, api_response],
         )
     demo.launch()
