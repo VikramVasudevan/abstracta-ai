@@ -103,11 +103,20 @@ def render():
             with gr.Column():
                 requirements = gr.TextArea(
                     label="Your requirements",
-                    placeholder="Enter your requirements here",
-                    value="""I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
-                The API name should be get_products_count. 
-                The API is of type TABLE and uses the backend resource production.products. """,
+                    placeholder="I want to build an API ... explain your requirements here",
+                    value="""""",
                 )
+
+                example1 = gr.Text(label="Example-1", value="""
+                I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
+                The API name should be get_products_count. 
+                The API is of type TABLE and uses the backend resource production.products. """)
+
+                example2 = gr.Text(label="Example-2", value="""
+                I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
+                The API name should be get_products_count_custom. 
+                The API is of type CUSTOMSQL and uses the SQL below 
+                SELECT category_id, count(1) num_products FROM production.products group by category_id """)
             with gr.Column():
                 status_message = gr.Text(label="Status Message")
                 api_url = gr.Markdown(label="API URL")
@@ -117,7 +126,7 @@ def render():
         submitBtn = gr.Button("Generate API", scale=0, variant="primary")
         submitBtn.click(
             gatherInfo,
-            inputs=[requirements],
+            inputs=[requirements, example1, example2],
             outputs=[status_message, api_url, web_url, api_response],
         )
     demo.launch()
