@@ -149,3 +149,22 @@ class AbstractaClient:
             return response.json()
         else:
             raise Exception(f"Failed to create API: {response.status_code} {response.text}")
+
+    def grant_service_access(self, access_token: str, org: str, app: str, datasource: str, service: str, version: str, userId: list[str], roleName: list[str]):
+        url = f"{ABSTRACTA_METADATA_API_URL}/{org}/{app}/connectors/rdbms/find/{datasource}/services/find/{service}/{version}/grant"
+
+        payload = {
+            "userIdCsv": ",".join(userId),
+            "roleNameCsv": ",".join(roleName)
+        }
+
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+
+        response = requests.post(url, headers=headers, json=payload)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Failed to grant service access: {response.status_code} {response.text}")
+        
