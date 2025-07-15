@@ -7,6 +7,7 @@ load_dotenv(override=True)
 
 ABSTRACTA_API_URL="http://localhost:8080/rest/data/queryv2"
 ABSTRACTA_METADATA_API_URL="http://localhost:8080/rest/metadata"
+ABSTRACTA_WEB_URL="http://localhost/services"
 
 class AbstractaClient:
     def perform_auth(self):
@@ -25,11 +26,36 @@ class AbstractaClient:
     def generate_auth_url(self):
         return "http://localhost:8180/auth/realms/abstracta/protocol/openid-connect/token"
 
+    def generate_web_url(self, org : str, app : str, datasource : str, service : str, version : str):
+        return f"{ABSTRACTA_WEB_URL}/{org}/{app}/{datasource}/{service}/{version}"
+
     def generate_api_url(self, org : str, app : str, datasource : str, service : str, version : str):
         return f"{ABSTRACTA_API_URL}/{org}/{app}/{datasource}/{service}/{version}"
 
     def generate_system_api_url(self, service:str, version: str):
         return self.generate_api_url("ekahaa", "abstracta", "dq_repo", service, version)
+
+    def get_data(self, access_token: str, org: str, app: str, datasource: str, service: str, version: str):
+        url = self.generate_api_url(org, app, datasource, service, version)
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+
+        payload = {
+            "where": f"1 = 1",
+            "from" : 1,
+            "to" : 100,
+            "columns" : "*",
+            "lean" : True,
+            "forUser" : os.getenv("ABSTRACTA_FOR_USER"),
+            "forUserSecret" : os.getenv("ABSTRACTA_FOR_USER_SECRET")
+        }
+
+        response = requests.post(url, headers=headers, json=payload)
+        if(response.status_code == 200):
+            return response.json()
+        else:
+            raise Exception(f"Failed to get data: {response.status_code} {response.text}")
 
     def get_data_sources(self, access_token: str, org: str, app: str):
         request_url = self.generate_system_api_url("dq_databases", "0.0.0")
