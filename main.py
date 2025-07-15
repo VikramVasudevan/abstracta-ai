@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
 from abstracta_client import AbstractaClient
 from api_builder_agent import apiBuilderAgent, APIBuilderPayload
-from agents import Runner
+from agents import Runner, trace
 import gradio as gr
+import json
 
 def main():
     print("Hello from abstracta-ai!")
@@ -25,9 +26,14 @@ def main():
 
 async def gatherInfo(requirements):
     print(requirements)
-    payload = await Runner.run(apiBuilderAgent, requirements)
+    with trace("abstracta-builder-agent"):
+        payload_result = await Runner.run(apiBuilderAgent, requirements)
     access_token = AbstractaClient().perform_auth()
-    apiCreationResponse = AbstractaClient().create_api(access_token, payload.final_output_as(APIBuilderPayload))
+    payload =  payload_result.final_output
+    print(payload)
+    # if("sampleParameterValues" not in payload):
+    #     payload["sampleParameterValues"] = {}
+    apiCreationResponse = AbstractaClient().create_api(access_token, payload)
     return apiCreationResponse
 
 def render():
@@ -35,8 +41,8 @@ def render():
         gr.Markdown("Hello from abstracta-ai!")
         requirements = gr.TextArea(label="Your requirements", placeholder="Enter your requirements here", 
         value="""I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
-        The API name should be get_employees_count. 
-        The API is of type direct and uses the backend resource TBL_EMPLOYEE_STATS. """)
+        The API name should be get_products_count. 
+        The API is of type TABLE and uses the backend resource production.products. """)
         submitBtn = gr.Button("Submit")
         api = gr.Textbox(label="API", placeholder="API will be displayed here")
         submitBtn.click(gatherInfo, inputs=[requirements], outputs=[api])
