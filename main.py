@@ -65,20 +65,26 @@ async def gatherInfo(requirements):
     )
     print(serviceAccessResponse)
     yield "Service access granted successfully. Generating API URLs ...", "", "", []
-    new_api_url = format_url_as_markdown("API URL", AbstractaClient().generate_api_url(
-        payload.orgName,
-        payload.appName,
-        payload.datasourceName,
-        payload.serviceName,
-        newServiceVersion,
-    ))
-    new_web_url = format_url_as_markdown("Web URL", AbstractaClient().generate_web_url(
-        payload.orgName,
-        payload.appName,
-        payload.datasourceName,
-        payload.serviceName,
-        newServiceVersion,
-    ))
+    new_api_url = format_url_as_markdown(
+        "API URL",
+        AbstractaClient().generate_api_url(
+            payload.orgName,
+            payload.appName,
+            payload.datasourceName,
+            payload.serviceName,
+            newServiceVersion,
+        ),
+    )
+    new_web_url = format_url_as_markdown(
+        "Web URL",
+        AbstractaClient().generate_web_url(
+            payload.orgName,
+            payload.appName,
+            payload.datasourceName,
+            payload.serviceName,
+            newServiceVersion,
+        ),
+    )
     yield "API URLs generated successfully. Fetching data from API ...", new_api_url, new_web_url, []
     data = AbstractaClient().get_data(
         access_token,
@@ -92,6 +98,8 @@ async def gatherInfo(requirements):
     yield "Data fetched successfully. Returning results ...", new_api_url, new_web_url, data
     return
 
+def requirements_on_change(requirements):
+    return gr.update(interactive=bool(requirements.strip()))
 
 def render():
     with gr.Blocks(
@@ -107,27 +115,50 @@ def render():
                     value="""""",
                 )
 
-                example1 = gr.Text(label="Example-1", value="""
+                example1 = gr.Text(
+                    label="For instance you could ask me ...",
+                    value="""
                 I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
                 The API name should be get_products_count. 
-                The API is of type TABLE and uses the backend resource production.products. """)
+                The API is of type TABLE and uses the backend resource production.products. """,
+                )
 
-                example2 = gr.Text(label="Example-2", value="""
+                example2 = gr.Text(
+                    label="or this ...",
+                    value="""
                 I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
                 The API name should be get_products_count_custom. 
                 The API is of type CUSTOMSQL and uses the SQL below 
-                SELECT category_id, count(1) num_products FROM production.products group by category_id """)
+                SELECT category_id, count(1) num_products FROM production.products group by category_id """,
+                )
+
+                example3 = gr.Text(
+                    label="or quite simply, this ...",
+                    value="""
+                I want to build an API called ai_driven_api_001 which connects to the backend resource production.products in the datasource demo_ds_001 
+                and store it under application demo_app_001 in organization demo_org_001. """,
+                )
+
             with gr.Column():
                 status_message = gr.Text(label="Status Message")
-                api_url = gr.Markdown(label="API URL")
-                web_url = gr.Markdown(label="Web URL")
+                api_url = gr.Markdown(label="API URL",value="### Generated API URL")
+                web_url = gr.Markdown(label="Web URL",value="### Generated Web URL")
                 api_response = gr.JSON(label="API Response", value=[])
 
-        submitBtn = gr.Button("Generate API", scale=0, variant="primary")
+        submitBtn = gr.Button(
+            "Generate API", scale=0, variant="primary", interactive=False
+        )
         submitBtn.click(
             gatherInfo,
             inputs=[requirements],
             outputs=[status_message, api_url, web_url, api_response],
+        )
+
+        # Enable button only when there is input
+        requirements.change(
+            fn=requirements_on_change,
+            outputs=[submitBtn],
+            inputs=[requirements],
         )
     demo.launch()
 
