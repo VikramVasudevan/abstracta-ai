@@ -7,6 +7,32 @@ import os
 import gradio.themes as themes
 import pandas
 
+
+def get_data(org_name, app_name, datasource_name, service_name, service_version):
+    print(
+        f"Getting data from {org_name}, {app_name}, {datasource_name}, {service_name}, {service_version}"
+    )
+    access_token = AbstractaClient().perform_auth()
+    return gr.update(
+        label=f"{org_name}/{app_name}/{datasource_name}/{service_name}/{service_version}",
+        value=pandas.DataFrame(
+            AbstractaClient().get_data(
+                access_token,
+                org_name,
+                app_name,
+                datasource_name,
+                service_name,
+                service_version,
+            )
+        ),
+    )
+
+
+def get_all_services():
+    access_token = AbstractaClient().perform_auth()
+    return AbstractaClient().get_all_services(access_token)
+
+
 def main():
     print("Hello from abstracta-ai!")
 
@@ -95,7 +121,9 @@ async def gatherInfo(requirements):
         newServiceVersion,
     )
     print(data)
-    yield "Data fetched successfully. Returning results ...", new_api_url, new_web_url, data, pandas.DataFrame(data)
+    yield "Data fetched successfully. Returning results ...", new_api_url, new_web_url, data, pandas.DataFrame(
+        data
+    )
     return
 
 
@@ -115,8 +143,8 @@ def render():
                     requirements = gr.TextArea(
                         placeholder="I want to build an API ... explain your requirements here",
                         value="""""",
-                        show_label=False, 
-                        lines=3
+                        show_label=False,
+                        lines=3,
                     )
 
                     submitBtn = gr.Button(
@@ -152,24 +180,28 @@ def render():
                             info="or quite simply, this ...",
                             value="""I want to build an API called ai_driven_api_001 which connects to the backend resource production.products in the datasource demo_ds_001 
                     and store it under application demo_app_001 in organization demo_org_001. """,
-                            lines=3,    
+                            lines=3,
                             show_copy_button=True,
                         )
 
                 with gr.Column():
                     status_message = gr.Text(label="Status", scale=0)
                     api_url = gr.Markdown(
-                        label="API URL", value="### Generated API URL",
+                        label="API URL",
+                        value="### Generated API URL",
                         show_copy_button=True,
                     )
                     web_url = gr.Markdown(
-                        label="Web URL", value="### Generated Web URL",
+                        label="Web URL",
+                        value="### Generated Web URL",
                         show_copy_button=True,
                     )
                     with gr.Tab("JSON"):
                         api_response = gr.JSON(label="API Response", value=[])
                     with gr.Tab("Data"):
-                        data_response = gr.Dataframe(label="Data Response", value=[])
+                        data_response = gr.Dataframe(
+                            label="Data Response", value=[], show_search="filter"
+                        )
 
             submitBtn.click(
                 gatherInfo,
@@ -185,8 +217,37 @@ def render():
             )
         with gr.Tab("View API"):
             gr.Markdown("# View API")
+            dataFrame = gr.DataFrame(
+                value=[], show_search="filter", label="None selected"
+            )
             with gr.Sidebar():
-                gr.Markdown("# Datasources")
+                gr.Markdown("## APIs")
+                all_services = get_all_services()
+                for service in all_services:
+                    org_name = service["org_name"]
+                    app_name = service["app_name"]
+                    datasource_name = service["dqdb_db_name"]
+                    service_name = service["dtbl_table_name"]
+                    service_version = service["dtbl_version"]
+                    api_url = AbstractaClient().generate_api_url(
+                        org_name,
+                        app_name,
+                        datasource_name,
+                        service_name,
+                        service_version,
+                    )
+                    button = gr.Button(
+                        value=f"{service_name}_{service_version}",
+                        scale=0,
+                        variant="primary",
+                    )
+                    button.click(
+                        lambda o=org_name, a=app_name, d=datasource_name, s=service_name, v=service_version: get_data(
+                            o, a, d, s, v
+                        ),
+                        inputs=[],
+                        outputs=[dataFrame],
+                    )
 
     demo.launch()
 

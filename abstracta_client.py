@@ -167,4 +167,52 @@ class AbstractaClient:
             return response.json()
         else:
             raise Exception(f"Failed to grant service access: {response.status_code} {response.text}")
+
+    def get_services(self, access_token: str, org: str, app: str, datasource: str):
+        request_url = self.generate_system_api_url("vw_db_tables", "0.0.0")
+
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+
+        payload = {
+            "where": f" org_name = '{org}' AND app_name = '{app}' and dqdb_db_name='{datasource}'",
+            "from" : 1,
+            "to" : 100,
+            "columns" : "org_name, app_name, dqdb_db_name, dtbl_table_name, dtbl_version",
+            "lean" : True,
+            "forUser" : os.getenv("ABSTRACTA_FOR_USER"),
+            "forUserSecret" : os.getenv("ABSTRACTA_FOR_USER_SECRET")
+        }
+
+        response = requests.post(request_url, headers=headers, json=payload)
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        else:
+            raise Exception(f"Failed to get services: {response.status_code} {response.text}")
+
+    def get_all_services(self, access_token: str):
+        request_url = self.generate_system_api_url("vw_db_tables", "0.0.0")
+
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+
+        payload = {
+            "where": f" 1 = 1",
+            "from" : 1,
+            "to" : 1000,
+            "columns" : "org_name, app_name, dqdb_db_name, dtbl_table_name, dtbl_version",
+            "lean" : True,
+            "forUser" : os.getenv("ABSTRACTA_FOR_USER"),
+            "forUserSecret" : os.getenv("ABSTRACTA_FOR_USER_SECRET")
+        }
+
+        response = requests.post(request_url, headers=headers, json=payload)
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        else:
+            raise Exception(f"Failed to get all services: {response.status_code} {response.text}")
         
