@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from gradio.components import component
 from abstracta_client import AbstractaClient, ABSTRACTA_API_URL
 from api_builder_agent import apiBuilderAgent, APIBuilderPayload
 from agents import Runner, trace
@@ -13,17 +14,20 @@ def get_data(org_name, app_name, datasource_name, service_name, service_version)
         f"Getting data from {org_name}, {app_name}, {datasource_name}, {service_name}, {service_version}"
     )
     access_token = AbstractaClient().perform_auth()
-    return gr.update(
-        label=f"{org_name}/{app_name}/{datasource_name}/{service_name}/{service_version}",
-        value=pandas.DataFrame(
-            AbstractaClient().get_data(
-                access_token,
-                org_name,
-                app_name,
-                datasource_name,
-                service_name,
-                service_version,
-            )
+    return (
+        f"[Open in Abstracta]({AbstractaClient().generate_web_url(org_name, app_name, datasource_name, service_name, service_version)})",
+        gr.update(
+            label=f"{org_name}/{app_name}/{datasource_name}/{service_name}/{service_version}",
+            value=pandas.DataFrame(
+                AbstractaClient().get_data(
+                    access_token,
+                    org_name,
+                    app_name,
+                    datasource_name,
+                    service_name,
+                    service_version,
+                )
+            ),
         ),
     )
 
@@ -31,6 +35,33 @@ def get_data(org_name, app_name, datasource_name, service_name, service_version)
 def get_all_services():
     access_token = AbstractaClient().perform_auth()
     return AbstractaClient().get_all_services(access_token)
+
+
+def get_services(org_name, app_name, datasource_name):
+    access_token = AbstractaClient().perform_auth()
+    return AbstractaClient().get_services(
+        access_token, org_name, app_name, datasource_name
+    )
+
+
+def get_organizations():
+    access_token = AbstractaClient().perform_auth()
+    return AbstractaClient().get_organizations(access_token)
+
+
+def get_applications(org_name):
+    access_token = AbstractaClient().perform_auth()
+    return gr.update(
+        choices=AbstractaClient().get_applications(access_token, org_name), value=None
+    )
+
+
+def get_data_sources(org_name, app_name):
+    access_token = AbstractaClient().perform_auth()
+    return gr.update(
+        choices=AbstractaClient().get_data_sources(access_token, org_name, app_name),
+        value=None,
+    )
 
 
 def main():
@@ -133,6 +164,31 @@ def requirements_on_change(requirements):
 
 def render():
     with gr.Blocks(
+        css="""
+/* Hide default radio circle */
+input[type="radio"] {
+    display: none;
+}
+
+/* Style all radio labels */
+.radio-item label {
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: block;
+    margin-bottom: 4px;
+    border: 1px solid #ccc;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+/* Gradio adds .selected to the label of selected radio */
+.radio-item label.selected {
+    background-color: #d0ebff;
+    border-color: #339af0;
+    font-weight: bold;
+    color: #084298;
+}
+""",
         title="Abstracta AI-Driven API Builder",
         theme=themes.Default(primary_hue="blue"),
     ) as demo:
@@ -215,39 +271,98 @@ def render():
                 outputs=[submitBtn],
                 inputs=[requirements],
             )
-        with gr.Tab("View API"):
-            gr.Markdown("# View API")
+        with gr.Tab("Data Previewer"):
+            gr.Markdown("# Data Previewer")
+            abstractaWebHyperLink = gr.Markdown("")
             dataFrame = gr.DataFrame(
                 value=[], show_search="filter", label="None selected"
             )
             with gr.Sidebar():
                 gr.Markdown("## APIs")
-                all_services = get_all_services()
-                for service in all_services:
-                    org_name = service["org_name"]
-                    app_name = service["app_name"]
-                    datasource_name = service["dqdb_db_name"]
-                    service_name = service["dtbl_table_name"]
-                    service_version = service["dtbl_version"]
-                    api_url = AbstractaClient().generate_api_url(
+                organizations = get_organizations()
+                orgDropDown = gr.Dropdown(
+                    label="Organization", choices=organizations, value=None
+                )
+                appDropDown = gr.Dropdown(label="Application", choices=[], value="")
+                datasourceDropDown = gr.Dropdown(
+                    label="Datasource", choices=[], value=""
+                )
+                orgDropDown.change(
+                    fn=get_applications,
+                    outputs=[appDropDown],
+                    inputs=[orgDropDown],
+                )
+                appDropDown.change(
+                    fn=get_data_sources,
+                    outputs=[datasourceDropDown],
+                    inputs=[orgDropDown, appDropDown],
+                )
+
+                def on_datasource_change(org_name, app_name, datasource_name):
+                    services = get_services(org_name, app_name, datasource_name)
+                    return gr.update(
+                        choices=[
+                            f"{service['dtbl_table_name']}/{service['dtbl_version']}"
+                            for service in services
+                        ],
+                        visible=True if services else False,
+                    )
+
+                service_selector = gr.Radio(
+                    label="Available Services",
+                    choices=[],
+                    visible=False,
+                    elem_classes="radio-item",
+                )
+                datasourceDropDown.change(
+                    fn=on_datasource_change,
+                    inputs=[orgDropDown, appDropDown, datasourceDropDown],
+                    outputs=[service_selector],
+                )
+
+                service_selector.change(
+                    fn=lambda service_with_version, org_name, app_name, datasource_name: get_data(
                         org_name,
                         app_name,
                         datasource_name,
-                        service_name,
-                        service_version,
-                    )
-                    button = gr.Button(
-                        value=f"{service_name}_{service_version}",
-                        scale=0,
-                        variant="primary",
-                    )
-                    button.click(
-                        lambda o=org_name, a=app_name, d=datasource_name, s=service_name, v=service_version: get_data(
-                            o, a, d, s, v
-                        ),
-                        inputs=[],
-                        outputs=[dataFrame],
-                    )
+                        service_with_version.split("/")[0],
+                        service_with_version.split("/")[1],
+                    ),
+                    inputs=[
+                        service_selector,
+                        orgDropDown,
+                        appDropDown,
+                        datasourceDropDown,
+                    ],
+                    outputs=[abstractaWebHyperLink, dataFrame],
+                )
+
+                # all_services = get_all_services()
+                # for service in all_services:
+                #     org_name = service["org_name"]
+                #     app_name = service["app_name"]
+                #     datasource_name = service["dqdb_db_name"]
+                #     service_name = service["dtbl_table_name"]
+                #     service_version = service["dtbl_version"]
+                #     api_url = AbstractaClient().generate_api_url(
+                #         org_name,
+                #         app_name,
+                #         datasource_name,
+                #         service_name,
+                #         service_version,
+                #     )
+                #     button = gr.Button(
+                #         value=f"{service_name}_{service_version}",
+                #         scale=0,
+                #         variant="primary",
+                #     )
+                #     button.click(
+                #         lambda o=org_name, a=app_name, d=datasource_name, s=service_name, v=service_version: get_data(
+                #             o, a, d, s, v
+                #         ),
+                #         inputs=[],
+                #         outputs=[abstractaWebHyperLink, dataFrame],
+                #     )
 
     demo.launch()
 

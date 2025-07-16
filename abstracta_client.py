@@ -205,6 +205,7 @@ class AbstractaClient:
             "to" : 1000,
             "columns" : "org_name, app_name, dqdb_db_name, dtbl_table_name, dtbl_version",
             "lean" : True,
+            "orderby" : "dtbl_when_created desc",
             "forUser" : os.getenv("ABSTRACTA_FOR_USER"),
             "forUserSecret" : os.getenv("ABSTRACTA_FOR_USER_SECRET")
         }
