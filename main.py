@@ -5,7 +5,7 @@ from agents import Runner, trace
 import gradio as gr
 import os
 import gradio.themes as themes
-
+import pandas
 
 def main():
     print("Hello from abstracta-ai!")
@@ -38,19 +38,19 @@ def format_url_as_markdown(label, url):
 
 
 async def gatherInfo(requirements):
-    yield "Generating API based on your requirements ... this may take a while", "", "", []
+    yield "Generating API based on your requirements ... this may take a while", "", "", [], []
     print(requirements)
     with trace("abstracta-builder-agent"):
         payload_result = await Runner.run(apiBuilderAgent, requirements)
-    yield "Constructed API Builder Payload successfully. Authenticating to Abstracta API ...", "", "", []
+    yield "Constructed API Builder Payload successfully. Authenticating to Abstracta API ...", "", "", [], []
     access_token = AbstractaClient().perform_auth()
-    yield "Authenticated to Abstracta API successfully. Creating API ...", "", "", []
+    yield "Authenticated to Abstracta API successfully. Creating API ...", "", "", [], []
     payload = payload_result.final_output
     print(payload)
     # if("sampleParameterValues" not in payload):
     #     payload["sampleParameterValues"] = {}
     apiCreationResponse = AbstractaClient().create_api(access_token, payload)
-    yield "API created successfully. Granting service access ...", "", "", []
+    yield "API created successfully. Granting service access ...", "", "", [], []
     print(apiCreationResponse)
     newServiceVersion = apiCreationResponse["service-info"]["tables"][0]["dtbl_version"]
     serviceAccessResponse = AbstractaClient().grant_service_access(
@@ -64,7 +64,7 @@ async def gatherInfo(requirements):
         ["VIEWER", "EDITOR", "CREATOR"],
     )
     print(serviceAccessResponse)
-    yield "Service access granted successfully. Generating API URLs ...", "", "", []
+    yield "Service access granted successfully. Generating API URLs ...", "", "", [], []
     new_api_url = format_url_as_markdown(
         "API URL",
         AbstractaClient().generate_api_url(
@@ -85,7 +85,7 @@ async def gatherInfo(requirements):
             newServiceVersion,
         ),
     )
-    yield "API URLs generated successfully. Fetching data from API ...", new_api_url, new_web_url, []
+    yield "API URLs generated successfully. Fetching data from API ...", new_api_url, new_web_url, [], []
     data = AbstractaClient().get_data(
         access_token,
         payload.orgName,
@@ -95,7 +95,7 @@ async def gatherInfo(requirements):
         newServiceVersion,
     )
     print(data)
-    yield "Data fetched successfully. Returning results ...", new_api_url, new_web_url, data
+    yield "Data fetched successfully. Returning results ...", new_api_url, new_web_url, data, pandas.DataFrame(data)
     return
 
 
@@ -166,12 +166,15 @@ def render():
                         label="Web URL", value="### Generated Web URL",
                         show_copy_button=True,
                     )
-                    api_response = gr.JSON(label="API Response", value=[])
+                    with gr.Tab("JSON"):
+                        api_response = gr.JSON(label="API Response", value=[])
+                    with gr.Tab("Data"):
+                        data_response = gr.Dataframe(label="Data Response", value=[])
 
             submitBtn.click(
                 gatherInfo,
                 inputs=[requirements],
-                outputs=[status_message, api_url, web_url, api_response],
+                outputs=[status_message, api_url, web_url, api_response, data_response],
             )
 
             # Enable button only when there is input
@@ -182,6 +185,9 @@ def render():
             )
         with gr.Tab("View API"):
             gr.Markdown("# View API")
+            with gr.Sidebar():
+                gr.Markdown("# Datasources")
+
     demo.launch()
 
 
