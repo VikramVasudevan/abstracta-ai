@@ -192,7 +192,7 @@ input[type="radio"] {
         title="Abstracta AI-Driven API Builder",
         theme=themes.Default(primary_hue="blue"),
     ) as demo:
-        with gr.Tab("Build API"):
+        with gr.Tab("API Builder"):
             gr.Markdown("# Abstracta AI-Driven API Builder")
             with gr.Row(equal_height=True):
                 with gr.Column():
@@ -204,7 +204,7 @@ input[type="radio"] {
                     )
 
                     submitBtn = gr.Button(
-                        "Generate API", scale=0, variant="primary", interactive=False
+                        "Build API", scale=0, variant="primary", interactive=False
                     )
 
                     with gr.Row():
