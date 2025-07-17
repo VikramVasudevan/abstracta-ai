@@ -201,6 +201,7 @@ input[type="radio"] {
                         value="""""",
                         show_label=False,
                         lines=3,
+                        container=False,
                     )
 
                     submitBtn = gr.Button(
@@ -241,7 +242,7 @@ input[type="radio"] {
                         )
 
                 with gr.Column():
-                    status_message = gr.Text(label="Status", scale=0)
+                    status_message = gr.Text(label="Status", scale=0, container=False)
                     api_url = gr.Markdown(
                         label="API URL",
                         value="### Generated API URL",
