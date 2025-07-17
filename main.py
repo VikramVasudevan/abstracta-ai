@@ -208,37 +208,37 @@ input[type="radio"] {
                         "Build API", scale=0, variant="primary", interactive=False
                     )
 
-                    with gr.Row():
+                    with gr.Accordion(label="For instance you could ask me ...", open=False) as accordion1:
                         example1 = gr.Text(
-                            label="Example 1",
-                            info="For instance you could ask me ...",
                             value="""I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
                         The API name should be get_products_count. 
                         The API is of type TABLE and uses the backend resource production.products. """,
+                            label="API using a direct datasource",
                             lines=3,
                             show_copy_button=True,
+                            show_label=True
                         )
 
-                    with gr.Row():
+                    with gr.Accordion(label="Or this ...", open=False) as accordion2:
                         example2 = gr.Text(
-                            label="Example 2",
-                            info="or this ...",
                             value="""I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
                     The API name should be get_products_count_custom. 
                     The API is of type CUSTOMSQL and uses the SQL below 
                     SELECT category_id, count(1) num_products FROM production.products group by category_id """,
-                            lines=3,
+                            label="Custom API",
+                            lines=4,
                             show_copy_button=True,
+                            show_label=True
                         )
 
-                    with gr.Row():
+                    with gr.Accordion(label="Or quite simply, this ...", open=False) as accordion3:
                         example3 = gr.Text(
-                            label="Example 3",
-                            info="or quite simply, this ...",
                             value="""I want to build an API called ai_driven_api_001 which connects to the backend resource production.products in the datasource demo_ds_001 
                     and store it under application demo_app_001 in organization demo_org_001. """,
+                            label="Concise",
                             lines=3,
                             show_copy_button=True,
+                            show_label=True
                         )
 
                 with gr.Column():
