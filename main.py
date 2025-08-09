@@ -31,6 +31,15 @@ logging.basicConfig(
 )
 
 
+def remove_dq(obj):
+    """Recursively remove any '_dq' keys from dicts/lists."""
+    if isinstance(obj, dict):
+        return {k: remove_dq(v) for k, v in obj.items() if k != "_dq"}
+    elif isinstance(obj, list):
+        return [remove_dq(item) for item in obj]
+    else:
+        return obj
+
 async def typewriter_effect(example_text):
     """Yields text one character at a time to simulate typing."""
     typed_text = ""
@@ -249,6 +258,8 @@ async def gatherInfo(requirements):
         payload.serviceName,
         newServiceVersion,
     )
+    data = remove_dq(data)
+
     # Step 5 - done
     yield build_progress(5, False), new_api_url, new_web_url, data, pandas.DataFrame(
         data
