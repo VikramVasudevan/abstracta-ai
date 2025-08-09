@@ -30,7 +30,17 @@ logging.basicConfig(
 )
 
 
+async def typewriter_effect(example_text):
+    """Yields text one character at a time to simulate typing."""
+    typed_text = ""
+    for char in example_text:
+        typed_text += char
+        yield typed_text
+        await asyncio.sleep(0.02)  # typing speed
+
+
 # --------------------- DATA FETCHING HELPERS ---------------------
+
 
 def get_data(org_name, app_name, datasource_name, service_name, service_version):
     """
@@ -46,7 +56,12 @@ def get_data(org_name, app_name, datasource_name, service_name, service_version)
             label=f"{org_name}/{app_name}/{datasource_name}/{service_name}/{service_version}",
             value=pandas.DataFrame(
                 AbstractaClient().get_data(
-                    access_token, org_name, app_name, datasource_name, service_name, service_version
+                    access_token,
+                    org_name,
+                    app_name,
+                    datasource_name,
+                    service_name,
+                    service_version,
                 )
             ),
         ),
@@ -73,7 +88,9 @@ def get_organizations():
 def get_applications(org_name):
     """Return available applications for a given organization."""
     return gr.update(
-        choices=AbstractaClient().get_applications(AbstractaClient().perform_auth(), org_name),
+        choices=AbstractaClient().get_applications(
+            AbstractaClient().perform_auth(), org_name
+        ),
         value=None,
     )
 
@@ -81,12 +98,15 @@ def get_applications(org_name):
 def get_data_sources(org_name, app_name):
     """Return available datasources for a given organization and application."""
     return gr.update(
-        choices=AbstractaClient().get_data_sources(AbstractaClient().perform_auth(), org_name, app_name),
+        choices=AbstractaClient().get_data_sources(
+            AbstractaClient().perform_auth(), org_name, app_name
+        ),
         value=None,
     )
 
 
 # --------------------- UTILS ---------------------
+
 
 def format_url_as_markdown(label, url):
     """Format a clickable markdown link."""
@@ -99,6 +119,7 @@ def requirements_on_change(requirements):
 
 
 # --------------------- MAIN API BUILD PROCESS ---------------------
+
 
 async def gatherInfo(requirements):
     """
@@ -113,7 +134,7 @@ async def gatherInfo(requirements):
         "Granting service access",
         "Generating API URLs",
         "Fetching data from API",
-        "Finalizing results"
+        "Finalizing results",
     ]
     total_steps = len(steps)
 
@@ -219,18 +240,25 @@ async def gatherInfo(requirements):
         newServiceVersion,
     )
     # Step 5 - done
-    yield build_progress(5, False), new_api_url, new_web_url, data, pandas.DataFrame(data)
+    yield build_progress(5, False), new_api_url, new_web_url, data, pandas.DataFrame(
+        data
+    )
     await asyncio.sleep(0.5)
 
     # Step 6 - start (finalizing)
-    yield build_progress(6, True), new_api_url, new_web_url, data, pandas.DataFrame(data)
+    yield build_progress(6, True), new_api_url, new_web_url, data, pandas.DataFrame(
+        data
+    )
     logging.info("Process completed successfully.")
     # Step 6 - done
-    yield build_progress(total_steps, False), new_api_url, new_web_url, data, pandas.DataFrame(data)
+    yield build_progress(
+        total_steps, False
+    ), new_api_url, new_web_url, data, pandas.DataFrame(data)
     await asyncio.sleep(0.5)
 
 
 # --------------------- RENDER UI ---------------------
+
 
 def render():
     """
@@ -252,7 +280,9 @@ def render():
 
     with gr.Blocks(theme=theme, title="Abstracta AI-Driven API Builder") as demo:
         with gr.Tab("🚀 API Builder"):
-            gr.Markdown("## Abstracta AI-Driven API Builder\nDescribe your API requirements and let AI do the rest!")
+            gr.Markdown(
+                "## Abstracta AI-Driven API Builder\nDescribe your API requirements and let AI do the rest!"
+            )
 
             with gr.Row():
                 with gr.Column(scale=1):
@@ -263,12 +293,22 @@ def render():
                     )
 
                     with gr.Row():
-                        for ex in examples:
-                            gr.Button("💡 Example", variant="secondary").click(
-                                lambda e=ex: e, outputs=requirements
+                        for idx, ex in enumerate(examples):
+                            # Use partial application so we can pass args to an async generator
+                            def make_handler(text):
+                                async def handler():
+                                    async for val in typewriter_effect(text):
+                                        yield val
+
+                                return handler
+
+                            gr.Button(f"💡 Example#{idx+1}", variant="secondary").click(
+                                fn=make_handler(ex), inputs=[], outputs=requirements
                             )
 
-                    submitBtn = gr.Button("⚡ Build API", variant="primary", interactive=False)
+                    submitBtn = gr.Button(
+                        "⚡ Build API", variant="primary", interactive=False
+                    )
 
                 with gr.Column(scale=1):
                     status_message = gr.HTML(label="Progress")
@@ -283,12 +323,10 @@ def render():
             submitBtn.click(
                 gatherInfo,
                 inputs=[requirements],
-                outputs=[status_message, api_url, web_url, api_response, data_response]
+                outputs=[status_message, api_url, web_url, api_response, data_response],
             )
             requirements.change(
-                fn=requirements_on_change,
-                outputs=[submitBtn],
-                inputs=[requirements]
+                fn=requirements_on_change, outputs=[submitBtn], inputs=[requirements]
             )
 
         with gr.Tab("📂 Data Previewer"):
@@ -296,29 +334,42 @@ def render():
 
             with gr.Row():
                 with gr.Column(scale=1):
-                    orgDropDown = gr.Dropdown(label="Organization", choices=get_organizations())
+                    orgDropDown = gr.Dropdown(
+                        label="Organization", choices=get_organizations()
+                    )
                     appDropDown = gr.Dropdown(label="Application")
                     datasourceDropDown = gr.Dropdown(label="Datasource")
-                    service_selector = gr.Radio(label="Available Services", elem_classes="radio-item", visible=False)
+                    service_selector = gr.Radio(
+                        label="Available Services",
+                        elem_classes="radio-item",
+                        visible=False,
+                    )
 
                 with gr.Column(scale=2):
                     abstractaWebHyperLink = gr.Markdown("")
-                    dataFrame = gr.DataFrame(value=[], show_search="filter", label="Preview")
+                    dataFrame = gr.DataFrame(
+                        value=[], show_search="filter", label="Preview"
+                    )
 
             orgDropDown.change(get_applications, [orgDropDown], [appDropDown])
-            appDropDown.change(get_data_sources, [orgDropDown, appDropDown], [datasourceDropDown])
+            appDropDown.change(
+                get_data_sources, [orgDropDown, appDropDown], [datasourceDropDown]
+            )
             datasourceDropDown.change(
                 lambda o, a, d: gr.update(
-                    choices=[f"{s['dtbl_table_name']}/{s['dtbl_version']}" for s in get_services(o, a, d)],
-                    visible=True
+                    choices=[
+                        f"{s['dtbl_table_name']}/{s['dtbl_version']}"
+                        for s in get_services(o, a, d)
+                    ],
+                    visible=True,
                 ),
                 [orgDropDown, appDropDown, datasourceDropDown],
-                [service_selector]
+                [service_selector],
             )
             service_selector.change(
                 lambda s, o, a, d: get_data(o, a, d, s.split("/")[0], s.split("/")[1]),
                 [service_selector, orgDropDown, appDropDown, datasourceDropDown],
-                [abstractaWebHyperLink, dataFrame]
+                [abstractaWebHyperLink, dataFrame],
             )
 
     demo.launch()
