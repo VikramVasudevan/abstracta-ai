@@ -9,6 +9,7 @@ automatically builds the API using Abstracta's services. It includes:
 - Logging with timestamps
 """
 
+import asyncio
 import os
 import time
 import logging
@@ -114,7 +115,6 @@ async def gatherInfo(requirements):
         "Fetching data from API",
         "Finalizing results"
     ]
-
     total_steps = len(steps)
 
     def build_progress(current_step, animate=False):
@@ -140,24 +140,32 @@ async def gatherInfo(requirements):
 
     logging.info(f"User request: {requirements}")
 
-    # Step 0
+    # Step 0 - start
     yield build_progress(0, True), "", "", [], []
-
     with trace("abstracta-builder-agent"):
         payload_result = await Runner.run(apiBuilderAgent, requirements)
+    # Step 0 - done
+    yield build_progress(0, False), "", "", [], []
+    await asyncio.sleep(0.5)
 
-    # Step 1
-    yield build_progress(2, True), "", "", [], []
+    # Step 1 - start
+    yield build_progress(1, True), "", "", [], []
     access_token = AbstractaClient().perform_auth()
+    # Step 1 - done
+    yield build_progress(1, False), "", "", [], []
+    await asyncio.sleep(0.5)
 
-    # Step 2
-    yield build_progress(3, True), "", "", [], []
+    # Step 2 - start
+    yield build_progress(2, True), "", "", [], []
     payload = payload_result.final_output
     apiCreationResponse = AbstractaClient().create_api(access_token, payload)
     logging.info("API created successfully.")
+    # Step 2 - done
+    yield build_progress(2, False), "", "", [], []
+    await asyncio.sleep(0.5)
 
-    # Step 3
-    yield build_progress(4, True), "", "", [], []
+    # Step 3 - start
+    yield build_progress(3, True), "", "", [], []
     newServiceVersion = apiCreationResponse["service-info"]["tables"][0]["dtbl_version"]
     AbstractaClient().grant_service_access(
         access_token,
@@ -170,9 +178,12 @@ async def gatherInfo(requirements):
         ["VIEWER", "EDITOR", "CREATOR"],
     )
     logging.info("Service access granted.")
+    # Step 3 - done
+    yield build_progress(3, False), "", "", [], []
+    await asyncio.sleep(0.5)
 
-    # Step 4
-    yield build_progress(5, True), "", "", [], []
+    # Step 4 - start
+    yield build_progress(4, True), "", "", [], []
     new_api_url = format_url_as_markdown(
         "API URL",
         AbstractaClient().generate_api_url(
@@ -193,9 +204,12 @@ async def gatherInfo(requirements):
             newServiceVersion,
         ),
     )
+    # Step 4 - done
+    yield build_progress(4, False), new_api_url, new_web_url, [], []
+    await asyncio.sleep(0.5)
 
-    # Step 5
-    yield build_progress(6, True), new_api_url, new_web_url, [], []
+    # Step 5 - start
+    yield build_progress(5, True), new_api_url, new_web_url, [], []
     data = AbstractaClient().get_data(
         access_token,
         payload.orgName,
@@ -204,13 +218,17 @@ async def gatherInfo(requirements):
         payload.serviceName,
         newServiceVersion,
     )
+    # Step 5 - done
+    yield build_progress(5, False), new_api_url, new_web_url, data, pandas.DataFrame(data)
+    await asyncio.sleep(0.5)
 
-    # Step 6 (final results)
-    yield build_progress(7, True), new_api_url, new_web_url, data, pandas.DataFrame(data)
+    # Step 6 - start (finalizing)
+    yield build_progress(6, True), new_api_url, new_web_url, data, pandas.DataFrame(data)
     logging.info("Process completed successfully.")
+    # Step 6 - done
+    yield build_progress(total_steps, False), new_api_url, new_web_url, data, pandas.DataFrame(data)
+    await asyncio.sleep(0.5)
 
-    # ✅ Step 7 - mark all done (progress bar 100% and all green)
-    yield build_progress(total_steps), new_api_url, new_web_url, data, pandas.DataFrame(data)
 
 # --------------------- RENDER UI ---------------------
 

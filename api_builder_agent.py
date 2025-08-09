@@ -73,6 +73,7 @@ from agents import Agent
 #             "dataSecurityFilter": {
 #                 "type": "string",
 #                 "description": "The data security filter",
+#                 "default" : ""
 #             },
 #         },
 #         "required": [
@@ -135,7 +136,7 @@ class APIBuilderPayload(BaseModel):
     versionType: Literal["MAJOR", "MINOR", "REVISION"] = Field(
         description="Version type: MAJOR, MINOR, or REVISION", default="MAJOR"
     )
-    dataSecurityFilter: str = Field(description="The data security filter only if provided by the user. Do not derive this yourself.", default="")
+    dataSecurityFilter: str = Field(description="The data security filter only if provided by the user. Do not derive this yourself. Default to empty string ''.", default="")
 
 
 print(APIBuilderPayload.model_json_schema())
