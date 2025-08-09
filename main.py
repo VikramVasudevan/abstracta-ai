@@ -1,17 +1,42 @@
-from dotenv import load_dotenv
-from gradio.components import component
-from abstracta_client import AbstractaClient, ABSTRACTA_API_URL
-from api_builder_agent import apiBuilderAgent, APIBuilderPayload
-from agents import Runner, trace
-import gradio as gr
-import os
-import gradio.themes as themes
-import pandas
+"""
+Abstracta AI-Driven API Builder
+--------------------------------
+This app allows users to describe API requirements in natural language and
+automatically builds the API using Abstracta's services. It includes:
+- Multiple ready-made example prompts
+- Animated progress tracker
+- Data previewer
+- Logging with timestamps
+"""
 
+import os
+import time
+import logging
+import pandas
+import gradio as gr
+import gradio.themes as themes
+from dotenv import load_dotenv
+from abstracta_client import AbstractaClient
+from api_builder_agent import apiBuilderAgent
+from agents import Runner, trace
+
+
+# --------------------- LOGGING CONFIG ---------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s - %(message)s",
+    datefmt="%H:%M:%S",
+)
+
+
+# --------------------- DATA FETCHING HELPERS ---------------------
 
 def get_data(org_name, app_name, datasource_name, service_name, service_version):
-    print(
-        f"Getting data from {org_name}, {app_name}, {datasource_name}, {service_name}, {service_version}"
+    """
+    Fetch data from Abstracta API and return it as a DataFrame.
+    """
+    logging.info(
+        f"Fetching data: {org_name}/{app_name}/{datasource_name}/{service_name}/{service_version}"
     )
     access_token = AbstractaClient().perform_auth()
     return (
@@ -20,12 +45,7 @@ def get_data(org_name, app_name, datasource_name, service_name, service_version)
             label=f"{org_name}/{app_name}/{datasource_name}/{service_name}/{service_version}",
             value=pandas.DataFrame(
                 AbstractaClient().get_data(
-                    access_token,
-                    org_name,
-                    app_name,
-                    datasource_name,
-                    service_name,
-                    service_version,
+                    access_token, org_name, app_name, datasource_name, service_name, service_version
                 )
             ),
         ),
@@ -33,84 +53,113 @@ def get_data(org_name, app_name, datasource_name, service_name, service_version)
 
 
 def get_all_services():
-    access_token = AbstractaClient().perform_auth()
-    return AbstractaClient().get_all_services(access_token)
+    """Return all available services from Abstracta."""
+    return AbstractaClient().get_all_services(AbstractaClient().perform_auth())
 
 
 def get_services(org_name, app_name, datasource_name):
-    access_token = AbstractaClient().perform_auth()
+    """Return services for a given organization, application, and datasource."""
     return AbstractaClient().get_services(
-        access_token, org_name, app_name, datasource_name
+        AbstractaClient().perform_auth(), org_name, app_name, datasource_name
     )
 
 
 def get_organizations():
-    access_token = AbstractaClient().perform_auth()
-    return AbstractaClient().get_organizations(access_token)
+    """Return all available organizations."""
+    return AbstractaClient().get_organizations(AbstractaClient().perform_auth())
 
 
 def get_applications(org_name):
-    access_token = AbstractaClient().perform_auth()
+    """Return available applications for a given organization."""
     return gr.update(
-        choices=AbstractaClient().get_applications(access_token, org_name), value=None
-    )
-
-
-def get_data_sources(org_name, app_name):
-    access_token = AbstractaClient().perform_auth()
-    return gr.update(
-        choices=AbstractaClient().get_data_sources(access_token, org_name, app_name),
+        choices=AbstractaClient().get_applications(AbstractaClient().perform_auth(), org_name),
         value=None,
     )
 
 
-def main():
-    print("Hello from abstracta-ai!")
+def get_data_sources(org_name, app_name):
+    """Return available datasources for a given organization and application."""
+    return gr.update(
+        choices=AbstractaClient().get_data_sources(AbstractaClient().perform_auth(), org_name, app_name),
+        value=None,
+    )
 
-    access_token = AbstractaClient().perform_auth()
-    print(access_token)
-    # use this access token to make a request to the abstracta api
-    organizations = AbstractaClient().get_organizations(access_token)
-    print(organizations)
-    if len(organizations) > 0:
-        applications = AbstractaClient().get_applications(
-            access_token, organizations[0]
-        )
-        print(applications)
-        if len(applications) > 0:
-            data_sources = AbstractaClient().get_data_sources(
-                access_token, organizations[0], applications[0]
-            )
-            print(data_sources)
-        else:
-            print("No applications found")
-    else:
-        print("No organizations found")
 
+# --------------------- UTILS ---------------------
 
 def format_url_as_markdown(label, url):
-    return f"""
-    ### Wanna access the {label}?
-    [Click here for {label}]({url})"""
+    """Format a clickable markdown link."""
+    return f"### {label}\n[{label}]({url})"
 
+
+def requirements_on_change(requirements):
+    """Enable or disable build button based on text area content."""
+    return gr.update(interactive=bool(requirements.strip()))
+
+
+# --------------------- MAIN API BUILD PROCESS ---------------------
 
 async def gatherInfo(requirements):
-    yield "Generating API based on your requirements ... this may take a while", "", "", [], []
-    print(requirements)
+    """
+    Main async function that runs the API build process.
+    Yields status updates at each step for live progress display.
+    """
+    steps = [
+        "Generating API based on your requirements",
+        "Constructing API Builder Payload",
+        "Authenticating to Abstracta API",
+        "Creating API",
+        "Granting service access",
+        "Generating API URLs",
+        "Fetching data from API",
+        "Finalizing results"
+    ]
+
+    total_steps = len(steps)
+
+    def build_progress(current_step, animate=False):
+        """Return HTML showing step progress with optional animation."""
+        html = "<ul style='list-style:none;padding:0'>"
+        for i, step in enumerate(steps):
+            if i < current_step:
+                html += f"<li>✅ <b>{step}</b></li>"
+            elif i == current_step:
+                dots = "." * ((int(time.time() * 2) % 3) + 1) if animate else ""
+                html += f"<li>⏳ <b>{step}{dots}</b></li>"
+            else:
+                html += f"<li>⬜ {step}</li>"
+        html += "</ul>"
+
+        percent = int((current_step / total_steps) * 100)
+        html += (
+            f"<div style='background:#eee;border-radius:8px;height:12px;overflow:hidden;margin-top:8px'>"
+            f"<div style='background:#2563eb;height:100%;width:{percent}%;transition:width 0.3s'></div>"
+            f"</div>"
+        )
+        return html
+
+    logging.info(f"User request: {requirements}")
+
+    # Step 0
+    yield build_progress(0, True), "", "", [], []
+
     with trace("abstracta-builder-agent"):
         payload_result = await Runner.run(apiBuilderAgent, requirements)
-    yield "Constructed API Builder Payload successfully. Authenticating to Abstracta API ...", "", "", [], []
+
+    # Step 1
+    yield build_progress(2, True), "", "", [], []
     access_token = AbstractaClient().perform_auth()
-    yield "Authenticated to Abstracta API successfully. Creating API ...", "", "", [], []
+
+    # Step 2
+    yield build_progress(3, True), "", "", [], []
     payload = payload_result.final_output
-    print(payload)
-    # if("sampleParameterValues" not in payload):
-    #     payload["sampleParameterValues"] = {}
     apiCreationResponse = AbstractaClient().create_api(access_token, payload)
-    yield "API created successfully. Granting service access ...", "", "", [], []
-    print(apiCreationResponse)
+    logging.info("API created successfully.")
+
+    # Step 3
+    yield build_progress(4, True), "", "", [], []
     newServiceVersion = apiCreationResponse["service-info"]["tables"][0]["dtbl_version"]
-    serviceAccessResponse = AbstractaClient().grant_service_access(
+    AbstractaClient().grant_service_access(
         access_token,
         payload.orgName,
         payload.appName,
@@ -120,8 +169,10 @@ async def gatherInfo(requirements):
         [os.getenv("ABSTRACTA_FOR_USER") or ""],
         ["VIEWER", "EDITOR", "CREATOR"],
     )
-    print(serviceAccessResponse)
-    yield "Service access granted successfully. Generating API URLs ...", "", "", [], []
+    logging.info("Service access granted.")
+
+    # Step 4
+    yield build_progress(5, True), "", "", [], []
     new_api_url = format_url_as_markdown(
         "API URL",
         AbstractaClient().generate_api_url(
@@ -142,7 +193,9 @@ async def gatherInfo(requirements):
             newServiceVersion,
         ),
     )
-    yield "API URLs generated successfully. Fetching data from API ...", new_api_url, new_web_url, [], []
+
+    # Step 5
+    yield build_progress(6, True), new_api_url, new_web_url, [], []
     data = AbstractaClient().get_data(
         access_token,
         payload.orgName,
@@ -151,219 +204,104 @@ async def gatherInfo(requirements):
         payload.serviceName,
         newServiceVersion,
     )
-    print(data)
-    yield "Data fetched successfully. Returning results ...", new_api_url, new_web_url, data, pandas.DataFrame(
-        data
-    )
-    return
 
+    # Step 6 (final results)
+    yield build_progress(7, True), new_api_url, new_web_url, data, pandas.DataFrame(data)
+    logging.info("Process completed successfully.")
 
-def requirements_on_change(requirements):
-    return gr.update(interactive=bool(requirements.strip()))
+    # ✅ Step 7 - mark all done (progress bar 100% and all green)
+    yield build_progress(total_steps), new_api_url, new_web_url, data, pandas.DataFrame(data)
 
+# --------------------- RENDER UI ---------------------
 
 def render():
-    with gr.Blocks(
-        css="""
-/* Hide default radio circle */
-input[type="radio"] {
-    display: none;
-}
+    """
+    Render the Gradio UI for the API Builder and Data Previewer.
+    """
+    theme = themes.Soft(primary_hue="blue", secondary_hue="slate")
 
-/* Style all radio labels */
-.radio-item label {
-    padding: 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: block;
-    margin-bottom: 4px;
-    border: 1px solid #ccc;
-    transition: background 0.2s, border-color 0.2s;
-}
-
-/* Gradio adds .selected to the label of selected radio */
-.radio-item label.selected {
-    background-color: #d0ebff;
-    border-color: #339af0;
-    font-weight: bold;
-    color: #084298;
-}
-""",
-        title="Abstracta AI-Driven API Builder",
-        theme=themes.Default(primary_hue="blue"),
-    ) as demo:
-        with gr.Tab("API Builder"):
-            gr.Markdown("# Abstracta AI-Driven API Builder")
-            with gr.Row(equal_height=True):
-                with gr.Column():
-                    requirements = gr.TextArea(
-                        placeholder="I want to build an API ... explain your requirements here",
-                        value="""""",
-                        show_label=False,
-                        lines=3,
-                        container=False,
-                    )
-
-                    submitBtn = gr.Button(
-                        "Build API", scale=0, variant="primary", interactive=False
-                    )
-
-                    with gr.Accordion(label="For instance you could ask me ...", open=False) as accordion1:
-                        example1 = gr.Text(
-                            value="""I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
+    examples = [
+        """I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
                         The API name should be get_products_count. 
                         The API is of type TABLE and uses the backend resource production.products. """,
-                            label="API using a direct datasource",
-                            lines=3,
-                            show_copy_button=True,
-                            show_label=True
-                        )
-
-                    with gr.Accordion(label="Or this ...", open=False) as accordion2:
-                        example2 = gr.Text(
-                            value="""I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
+        """I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
                     The API name should be get_products_count_custom. 
                     The API is of type CUSTOMSQL and uses the SQL below 
                     SELECT category_id, count(1) num_products FROM production.products group by category_id """,
-                            label="Custom API",
-                            lines=4,
-                            show_copy_button=True,
-                            show_label=True
-                        )
-
-                    with gr.Accordion(label="Or quite simply, this ...", open=False) as accordion3:
-                        example3 = gr.Text(
-                            value="""I want to build an API called ai_driven_api_001 which connects to the backend resource production.products in the datasource demo_ds_001 
+        """I want to build an API called ai_driven_api_001 which connects to the backend resource production.products in the datasource demo_ds_001 
                     and store it under application demo_app_001 in organization demo_org_001. """,
-                            label="Concise",
-                            lines=3,
-                            show_copy_button=True,
-                            show_label=True
-                        )
+    ]
 
-                with gr.Column():
-                    status_message = gr.Text(label="Status", scale=0, container=False)
-                    api_url = gr.Markdown(
-                        label="API URL",
-                        value="### Generated API URL",
-                        show_copy_button=True,
+    with gr.Blocks(theme=theme, title="Abstracta AI-Driven API Builder") as demo:
+        with gr.Tab("🚀 API Builder"):
+            gr.Markdown("## Abstracta AI-Driven API Builder\nDescribe your API requirements and let AI do the rest!")
+
+            with gr.Row():
+                with gr.Column(scale=1):
+                    requirements = gr.TextArea(
+                        placeholder="E.g. Build an API in org demo_org_001...",
+                        lines=4,
+                        label="Describe your API",
                     )
-                    web_url = gr.Markdown(
-                        label="Web URL",
-                        value="### Generated Web URL",
-                        show_copy_button=True,
-                    )
-                    with gr.Tab("JSON"):
-                        api_response = gr.JSON(label="API Response", value=[])
-                    with gr.Tab("Data"):
-                        data_response = gr.Dataframe(
-                            label="Data Response", value=[], show_search="filter"
-                        )
+
+                    with gr.Row():
+                        for ex in examples:
+                            gr.Button("💡 Example", variant="secondary").click(
+                                lambda e=ex: e, outputs=requirements
+                            )
+
+                    submitBtn = gr.Button("⚡ Build API", variant="primary", interactive=False)
+
+                with gr.Column(scale=1):
+                    status_message = gr.HTML(label="Progress")
+                    api_url = gr.Markdown("", elem_classes="output-card")
+                    web_url = gr.Markdown("", elem_classes="output-card")
+
+                    with gr.Accordion("📦 API Response (JSON)", open=False):
+                        api_response = gr.JSON(value=[])
+                    with gr.Accordion("📊 Data Preview", open=False):
+                        data_response = gr.Dataframe(value=[], show_search="filter")
 
             submitBtn.click(
                 gatherInfo,
                 inputs=[requirements],
-                outputs=[status_message, api_url, web_url, api_response, data_response],
+                outputs=[status_message, api_url, web_url, api_response, data_response]
             )
-
-            # Enable button only when there is input
             requirements.change(
                 fn=requirements_on_change,
                 outputs=[submitBtn],
-                inputs=[requirements],
+                inputs=[requirements]
             )
-        with gr.Tab("Data Previewer"):
-            gr.Markdown("# Data Previewer")
-            abstractaWebHyperLink = gr.Markdown("")
-            dataFrame = gr.DataFrame(
-                value=[], show_search="filter", label="None selected"
+
+        with gr.Tab("📂 Data Previewer"):
+            gr.Markdown("### Browse and Preview Your Abstracta Data")
+
+            with gr.Row():
+                with gr.Column(scale=1):
+                    orgDropDown = gr.Dropdown(label="Organization", choices=get_organizations())
+                    appDropDown = gr.Dropdown(label="Application")
+                    datasourceDropDown = gr.Dropdown(label="Datasource")
+                    service_selector = gr.Radio(label="Available Services", elem_classes="radio-item", visible=False)
+
+                with gr.Column(scale=2):
+                    abstractaWebHyperLink = gr.Markdown("")
+                    dataFrame = gr.DataFrame(value=[], show_search="filter", label="Preview")
+
+            orgDropDown.change(get_applications, [orgDropDown], [appDropDown])
+            appDropDown.change(get_data_sources, [orgDropDown, appDropDown], [datasourceDropDown])
+            datasourceDropDown.change(
+                lambda o, a, d: gr.update(
+                    choices=[f"{s['dtbl_table_name']}/{s['dtbl_version']}" for s in get_services(o, a, d)],
+                    visible=True
+                ),
+                [orgDropDown, appDropDown, datasourceDropDown],
+                [service_selector]
             )
-            with gr.Sidebar():
-                gr.Markdown("## APIs")
-                organizations = get_organizations()
-                orgDropDown = gr.Dropdown(
-                    label="Organization", choices=organizations, value=None
-                )
-                appDropDown = gr.Dropdown(label="Application", choices=[], value="")
-                datasourceDropDown = gr.Dropdown(
-                    label="Datasource", choices=[], value=""
-                )
-                orgDropDown.change(
-                    fn=get_applications,
-                    outputs=[appDropDown],
-                    inputs=[orgDropDown],
-                )
-                appDropDown.change(
-                    fn=get_data_sources,
-                    outputs=[datasourceDropDown],
-                    inputs=[orgDropDown, appDropDown],
-                )
-
-                def on_datasource_change(org_name, app_name, datasource_name):
-                    services = get_services(org_name, app_name, datasource_name)
-                    return gr.update(
-                        choices=[
-                            f"{service['dtbl_table_name']}/{service['dtbl_version']}"
-                            for service in services
-                        ],
-                        visible=True if services else False,
-                    )
-
-                service_selector = gr.Radio(
-                    label="Available Services",
-                    choices=[],
-                    visible=False,
-                    elem_classes="radio-item",
-                )
-                datasourceDropDown.change(
-                    fn=on_datasource_change,
-                    inputs=[orgDropDown, appDropDown, datasourceDropDown],
-                    outputs=[service_selector],
-                )
-
-                service_selector.change(
-                    fn=lambda service_with_version, org_name, app_name, datasource_name: get_data(
-                        org_name,
-                        app_name,
-                        datasource_name,
-                        service_with_version.split("/")[0],
-                        service_with_version.split("/")[1],
-                    ),
-                    inputs=[
-                        service_selector,
-                        orgDropDown,
-                        appDropDown,
-                        datasourceDropDown,
-                    ],
-                    outputs=[abstractaWebHyperLink, dataFrame],
-                )
-
-                # all_services = get_all_services()
-                # for service in all_services:
-                #     org_name = service["org_name"]
-                #     app_name = service["app_name"]
-                #     datasource_name = service["dqdb_db_name"]
-                #     service_name = service["dtbl_table_name"]
-                #     service_version = service["dtbl_version"]
-                #     api_url = AbstractaClient().generate_api_url(
-                #         org_name,
-                #         app_name,
-                #         datasource_name,
-                #         service_name,
-                #         service_version,
-                #     )
-                #     button = gr.Button(
-                #         value=f"{service_name}_{service_version}",
-                #         scale=0,
-                #         variant="primary",
-                #     )
-                #     button.click(
-                #         lambda o=org_name, a=app_name, d=datasource_name, s=service_name, v=service_version: get_data(
-                #             o, a, d, s, v
-                #         ),
-                #         inputs=[],
-                #         outputs=[abstractaWebHyperLink, dataFrame],
-                #     )
+            service_selector.change(
+                lambda s, o, a, d: get_data(o, a, d, s.split("/")[0], s.split("/")[1]),
+                [service_selector, orgDropDown, appDropDown, datasourceDropDown],
+                [abstractaWebHyperLink, dataFrame]
+            )
 
     demo.launch()
 
