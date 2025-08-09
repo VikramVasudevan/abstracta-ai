@@ -40,6 +40,7 @@ def remove_dq(obj):
     else:
         return obj
 
+
 async def typewriter_effect(example_text):
     """Yields text one character at a time to simulate typing."""
     typed_text = ""
@@ -142,7 +143,7 @@ async def gatherInfo(requirements):
         "",  # api_url
         "",  # web_url
         gr.update(visible=False),  # json_view
-        gr.update(visible=False)   # dataframe_view
+        gr.update(visible=False),  # dataframe_view
     )
 
     steps = [
@@ -273,12 +274,12 @@ async def gatherInfo(requirements):
     logging.info("Process completed successfully.")
     # Step 6 - done
     yield (
-            "✅ API built successfully!",
-            new_api_url,
-            new_web_url,
-            gr.update(value=data, visible=False),
-            gr.update(value=pandas.DataFrame(data), visible=True)
-        )    
+        "✅ API built successfully!",
+        new_api_url,
+        new_web_url,
+        gr.update(value=data, visible=False),
+        gr.update(value=pandas.DataFrame(data), visible=True),
+    )
     # yield build_progress(
     #     total_steps, False
     # ), new_api_url, new_web_url, data, pandas.DataFrame(data)
@@ -297,15 +298,21 @@ def render():
     )
 
     examples = [
-        """I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
-                        The API name should be get_products_count. 
-                        The API is of type TABLE and uses the backend resource production.products. """,
-        """I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
-                    The API name should be get_products_count_custom. 
-                    The API is of type CUSTOMSQL and uses the SQL below 
-                    SELECT category_id, count(1) num_products FROM production.products group by category_id """,
-        """I want to build an API called ai_driven_api_001 which connects to the backend resource production.products in the datasource demo_ds_001 
-                    and store it under application demo_app_001 in organization demo_org_001. """,
+        (
+            "I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001."
+            "The API name should be get_products_count."
+            "The API is of type TABLE and uses the backend resource production.products."
+        ),
+        (
+            "I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. "
+            "The API name should be get_products_count_custom. "
+            "The API is of type CUSTOMSQL and uses the SQL below:\n"
+            "SELECT category_id, count(1) num_products FROM production.products group by category_id "
+        ),
+        (
+            "I want to build an API called ai_driven_api_001 which connects to the backend resource production.products in the datasource demo_ds_001"
+            "and store it under application demo_app_001 in organization demo_org_001. "
+        ),
     ]
 
     with gr.Blocks(
@@ -348,10 +355,12 @@ def render():
 
                 with gr.Column(scale=3):
                     with gr.Row():
-                        btn_df = gr.Button("📊 DataFrame", size="sm", variant="primary")
-                        btn_json = gr.Button("📝 JSON", size="sm", variant="secondary")
+                        btn_df = gr.Button("📊 DataFrame View", size="sm", variant="primary", scale=0)
+                        btn_json = gr.Button("📝 JSON View", size="sm", variant="secondary", scale=0)
                     json_view = gr.JSON(value=[], visible=False)
-                    dataframe_view = gr.Dataframe(value=None, show_search="filter", visible=False)
+                    dataframe_view = gr.Dataframe(
+                        value=None, show_search="filter", visible=False
+                    )
 
                     def toggle_view(view_type):
                         """Toggle between DataFrame and JSON view with highlighted button."""
