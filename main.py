@@ -127,6 +127,15 @@ async def gatherInfo(requirements):
     Main async function that runs the API build process.
     Yields status updates at each step for live progress display.
     """
+    # Step 0 — Hide outputs immediately
+    yield (
+        "Building API... please wait.",  # status_message
+        "",  # api_url
+        "",  # web_url
+        gr.update(visible=False),  # json_view
+        gr.update(visible=False)   # dataframe_view
+    )
+
     steps = [
         "Generating API based on your requirements",
         "Constructing API Builder Payload",
@@ -252,9 +261,16 @@ async def gatherInfo(requirements):
     )
     logging.info("Process completed successfully.")
     # Step 6 - done
-    yield build_progress(
-        total_steps, False
-    ), new_api_url, new_web_url, data, pandas.DataFrame(data)
+    yield (
+            "✅ API built successfully!",
+            new_api_url,
+            new_web_url,
+            gr.update(value=data, visible=False),
+            gr.update(value=pandas.DataFrame(data), visible=True)
+        )    
+    # yield build_progress(
+    #     total_steps, False
+    # ), new_api_url, new_web_url, data, pandas.DataFrame(data)
     await asyncio.sleep(0.5)
 
 
@@ -265,7 +281,9 @@ def render():
     """
     Render the Gradio UI for the API Builder and Data Previewer.
     """
-    theme = themes.Soft(primary_hue="blue", secondary_hue="slate")
+    theme = themes.Soft(primary_hue="blue", secondary_hue="slate").set(
+        body_background_fill_dark="#000000"
+    )
 
     examples = [
         """I want to build an API located in demo_org_001 under the app demo_app_001 for the datasource demo_ds_001. 
@@ -279,7 +297,10 @@ def render():
                     and store it under application demo_app_001 in organization demo_org_001. """,
     ]
 
-    with gr.Blocks(theme=theme, title="Abstracta AI-Driven API Builder") as demo:
+    with gr.Blocks(
+        theme=theme,
+        title="Abstracta AI-Driven API Builder",
+    ) as demo:
         with gr.Tab("🚀 API Builder"):
             gr.Markdown(
                 "## Abstracta AI-Driven API Builder\nDescribe your API requirements and let AI do the rest!"
@@ -314,12 +335,12 @@ def render():
                     api_url = gr.Markdown("", elem_classes="output-card")
                     web_url = gr.Markdown("", elem_classes="output-card")
 
-                with gr.Column(scale=1):
+                with gr.Column(scale=3):
                     with gr.Row():
                         btn_df = gr.Button("📊 DataFrame", size="sm", variant="primary")
                         btn_json = gr.Button("📝 JSON", size="sm", variant="secondary")
                     json_view = gr.JSON(value=[], visible=False)
-                    dataframe_view = gr.Dataframe(value=None, show_search="filter")
+                    dataframe_view = gr.Dataframe(value=None, show_search="filter", visible=False)
 
                     def toggle_view(view_type):
                         """Toggle between DataFrame and JSON view with highlighted button."""
