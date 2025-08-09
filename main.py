@@ -310,30 +310,47 @@ def render():
                     submitBtn = gr.Button(
                         "⚡ Build API", variant="primary", interactive=False
                     )
-                    status_message = gr.HTML(label="Progress")                    
+                    status_message = gr.HTML(label="Progress")
                     api_url = gr.Markdown("", elem_classes="output-card")
                     web_url = gr.Markdown("", elem_classes="output-card")
 
                 with gr.Column(scale=1):
-                    # Radio for view selection
-                    view_selector = gr.Radio(["DataFrame", "JSON"], value="DataFrame", label="Select View")                    
+                    with gr.Row():
+                        btn_df = gr.Button("📊 DataFrame", size="sm", variant="primary")
+                        btn_json = gr.Button("📝 JSON", size="sm", variant="secondary")
                     json_view = gr.JSON(value=[], visible=False)
                     dataframe_view = gr.Dataframe(value=None, show_search="filter")
 
                     def toggle_view(view_type):
-                        """Show only the selected view."""
-                        if view_type == "JSON":
-                            return gr.update(visible=False), gr.update(visible=True)
+                        """Toggle between DataFrame and JSON view with highlighted button."""
+                        if view_type == "DataFrame":
+                            return (
+                                gr.update(visible=True),  # dataframe visible
+                                gr.update(visible=False),  # json hidden
+                                gr.update(
+                                    variant="primary"
+                                ),  # dataframe button highlighted
+                                gr.update(variant="secondary"),  # json button normal
+                            )
                         else:
-                            return gr.update(visible=True), gr.update(visible=False)
+                            return (
+                                gr.update(visible=False),
+                                gr.update(visible=True),
+                                gr.update(variant="secondary"),
+                                gr.update(variant="primary"),
+                            )
 
-                    # Toggle between views when radio changes
-                    view_selector.change(
-                        fn=toggle_view,
-                        inputs=view_selector,
-                        outputs=[dataframe_view, json_view]
+                    btn_df.click(
+                        lambda: toggle_view("DataFrame"),
+                        None,
+                        [dataframe_view, json_view, btn_df, btn_json],
                     )
-                    
+                    btn_json.click(
+                        lambda: toggle_view("JSON"),
+                        None,
+                        [dataframe_view, json_view, btn_df, btn_json],
+                    )
+
             submitBtn.click(
                 gatherInfo,
                 inputs=[requirements],
