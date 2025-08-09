@@ -10,6 +10,7 @@ automatically builds the API using Abstracta's services. It includes:
 """
 
 import asyncio
+import json
 import os
 import time
 import logging
@@ -309,21 +310,34 @@ def render():
                     submitBtn = gr.Button(
                         "⚡ Build API", variant="primary", interactive=False
                     )
-
-                with gr.Column(scale=1):
-                    status_message = gr.HTML(label="Progress")
+                    status_message = gr.HTML(label="Progress")                    
                     api_url = gr.Markdown("", elem_classes="output-card")
                     web_url = gr.Markdown("", elem_classes="output-card")
 
-                    with gr.Accordion("📦 API Response (JSON)", open=False):
-                        api_response = gr.JSON(value=[])
-                    with gr.Accordion("📊 Data Preview", open=False):
-                        data_response = gr.Dataframe(value=[], show_search="filter")
+                with gr.Column(scale=1):
+                    # Radio for view selection
+                    view_selector = gr.Radio(["DataFrame", "JSON"], value="DataFrame", label="Select View")                    
+                    json_view = gr.JSON(value=[], visible=False)
+                    dataframe_view = gr.Dataframe(value=None, show_search="filter")
 
+                    def toggle_view(view_type):
+                        """Show only the selected view."""
+                        if view_type == "JSON":
+                            return gr.update(visible=False), gr.update(visible=True)
+                        else:
+                            return gr.update(visible=True), gr.update(visible=False)
+
+                    # Toggle between views when radio changes
+                    view_selector.change(
+                        fn=toggle_view,
+                        inputs=view_selector,
+                        outputs=[dataframe_view, json_view]
+                    )
+                    
             submitBtn.click(
                 gatherInfo,
                 inputs=[requirements],
-                outputs=[status_message, api_url, web_url, api_response, data_response],
+                outputs=[status_message, api_url, web_url, json_view, dataframe_view],
             )
             requirements.change(
                 fn=requirements_on_change, outputs=[submitBtn], inputs=[requirements]
