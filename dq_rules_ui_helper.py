@@ -87,11 +87,13 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             return gr.update(value=df_flat, visible=visible)
 
     initial_outputs = (
-        gr.update(value="Building Data Quality Rules ... please wait.", visible=True),  # status_message
+        gr.update(
+            value="Building Data Quality Rules ... please wait.", visible=True
+        ),  # status_message
         "",  # api_url
         "",  # web_url
-        gr.update(visible=False),  # json_view
-        gr.update(visible=False),  # dataframe_view
+        makeComponentVisible(visible=False),  # json_view
+        makeComponentVisible(visible=False),  # dataframe_view
     )
 
     steps_info = [
@@ -102,8 +104,8 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             "yield": [
                 lambda context: "",
                 lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -113,8 +115,8 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             "yield": [
                 lambda context: "",
                 lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -124,8 +126,8 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             "yield": [
                 lambda context: "",
                 lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -133,29 +135,35 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             "name": "Generate API URL",
             "func": generateApiUrl,
             "yield": [
-                lambda context: gr.update(value=context["gen_api_url"], visible=True),
-                lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_api_url", visible=True
+                ),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
             "key": "gen_web_url",
             "name": "Generate Web URL",
             "func": generateWebUrl,
-            "yield_before" : [
+            "yield_before": [
                 lambda context: updateComponentData(
                     context := context, attribute="gen_api_url", visible=True
                 ),
                 lambda context: makeComponentVisible(visible=False),
                 lambda context: makeComponentVisible(visible=False),
-                lambda context: makeComponentVisible(visible=False),                
-            ],               
+                lambda context: makeComponentVisible(visible=False),
+            ],
             "yield": [
-                lambda context: gr.update(value=context["gen_api_url"], visible=True),
-                lambda context: gr.update(value=context["gen_web_url"], visible=True),
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_api_url", visible=True
+                ),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_web_url", visible=True
+                ),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -173,9 +181,15 @@ async def buildDataQualityRulesForExistingAPI(requirements):
                 lambda context: makeComponentVisible(visible=False),
             ],
             "yield": [
-                lambda context: gr.update(value=context["gen_api_url"], visible=True),
-                lambda context: gr.update(value=context["gen_web_url"], visible=True),
-                lambda context: gr.update(value=context["fetch_data"], visible=False),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_api_url", visible=True
+                ),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_web_url", visible=True
+                ),
+                lambda context: updateComponentData(
+                    context := context, attribute="fetch_data", visible=False
+                ),
                 lambda context: updateComponentData(
                     context := context,
                     attribute="fetch_data",

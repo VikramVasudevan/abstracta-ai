@@ -10,21 +10,15 @@ automatically builds the API using Abstracta's services. It includes:
 """
 
 import asyncio
-import json
-import os
-import time
 import logging
 import pandas
 import gradio as gr
 import gradio.themes as themes
 from dotenv import load_dotenv
 from abstracta_client import AbstractaClient
-from api_builder_agent import apiBuilderAgent
-from agents import Runner, trace
 from api_builder_ui_helper import buildAPI
 from dq_rules_ui_helper import buildDataQualityRulesForExistingAPI
-from markdown_formatter import format_url_as_markdown
-from steps_executor import steps_executor, fn_report_build_progress
+from profile_ui_helper import createProfile
 
 
 # --------------------- LOGGING CONFIG ---------------------
@@ -189,7 +183,10 @@ def render():
                             "⚡ Build API", variant="primary", interactive=False
                         )
                         buildDqRulesBtn = gr.Button(
-                            "⚡ Build DQ Rules", variant="primary", interactive=False
+                            "📊 Build DQ", variant="primary", interactive=False
+                        )
+                        createProfileBtn = gr.Button(
+                            "🛡️ Build Data Security Profile", variant="primary", interactive=False
                         )
 
                 with gr.Column(scale=3):
@@ -254,6 +251,12 @@ def render():
                 inputs=[requirements],
                 outputs=[status_message, api_url, web_url, json_view, dataframe_view],
             )
+            createProfileBtn.click(
+                createProfile,
+                inputs=[requirements],
+                outputs=[status_message, api_url, web_url, json_view, dataframe_view],
+            )
+
             requirements.change(
                 fn=requirements_on_change,
                 outputs=[buildAPIBtn, buildDqRulesBtn],
