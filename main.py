@@ -148,7 +148,7 @@ def render():
             "and store it under application demo_app_001 in organization demo_org_001. "
         ),
         (
-            "for my API demo_org_001/demo_app_001/demo_ds_001/salesorderitems/0.0.0, "
+            "For my API `demo_org_001/demo_app_001/demo_ds_001/salesorderitems/0.0.0`, "
             "add a dq rule for the field `list_price` to ensure it  remains in range 300-500"
         ),
     ]
