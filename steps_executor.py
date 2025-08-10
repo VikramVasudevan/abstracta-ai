@@ -90,7 +90,7 @@ async def steps_executor(
         await asyncio.sleep(0.5)
     else:
         logging.debug("Yielding default final message.")
-        yield (final_message, "", "", gr.update(visible=True), gr.update(visible=False))
+        yield (final_message, *(f(context) for f in step_yield))
         await asyncio.sleep(0.5)
 
 

@@ -144,7 +144,7 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             "yield": [
                 lambda context: gr.update(value=context["gen_api_url"], visible=True),
                 lambda context: gr.update(value=context["gen_web_url"], visible=True),
-                lambda context: gr.update(value=context["fetch_data"], visible=True),
+                lambda context: gr.update(value=context["fetch_data"], visible=False),
                 lambda context: gr.update(
                     value=pandas.DataFrame(context["fetch_data"]), visible=True
                 ),
