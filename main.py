@@ -193,8 +193,6 @@ def render():
                         )
 
                     status_message = gr.HTML(label="Progress")
-                    api_url = gr.Markdown("", elem_classes="output-card")
-                    web_url = gr.Markdown("", elem_classes="output-card")
 
                 with gr.Column(scale=3):
                     with gr.Row():
@@ -204,6 +202,10 @@ def render():
                         btn_json = gr.Button(
                             "📝 JSON View", size="sm", variant="secondary", scale=0
                         )
+                        # Spacer that expands to push markdowns right
+                        gr.Column(scale=1)  # Empty label as spacer                        
+                        api_url = gr.Markdown("", elem_classes="output-card")
+                        web_url = gr.Markdown("", elem_classes="output-card")
                     json_view = gr.JSON(value=[], visible=False)
                     dataframe_view = gr.Dataframe(
                         value=None, show_search="filter", visible=False
