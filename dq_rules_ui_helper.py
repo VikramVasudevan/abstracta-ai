@@ -70,8 +70,18 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             payload.version,
         )
 
-    async def finalize():
-        return ""
+    def updateComponentData(
+        context: any, attribute: str, visible: bool = True, dataframe: bool = False
+    ):
+        if not dataframe:
+            return gr.update(value=context[attribute], visible=visible)
+        else:
+            df = pandas.DataFrame(context[attribute])
+            dq_df = pandas.json_normalize(df["_dq"])
+            dq_df.columns = [f"_dq.{subcol}" for subcol in dq_df.columns]
+            df_flat = pandas.concat([df.drop(columns=["_dq"]), dq_df], axis=1)
+
+            return gr.update(value=df_flat, visible=visible)
 
     initial_outputs = (
         "Building Data Quality Rules ... please wait.",  # status_message
@@ -145,8 +155,11 @@ async def buildDataQualityRulesForExistingAPI(requirements):
                 lambda context: gr.update(value=context["gen_api_url"], visible=True),
                 lambda context: gr.update(value=context["gen_web_url"], visible=True),
                 lambda context: gr.update(value=context["fetch_data"], visible=False),
-                lambda context: gr.update(
-                    value=pandas.DataFrame(context["fetch_data"]), visible=True
+                lambda context: updateComponentData(
+                    context := context,
+                    attribute="fetch_data",
+                    visible=True,
+                    dataframe=True,
                 ),
             ],
         },

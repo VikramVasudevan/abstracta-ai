@@ -80,7 +80,7 @@ class DQRulesBuilderPayload(BaseModel):
     )
     fieldName: str = Field(description="Name of the field to apply the rule to.")
     dqRuleParametersPayloadJson: str = Field(
-        description=f"A string containing a dict of parameter name and value for the given dqCheckName. Refer to this configuration to get the supported parameters for a specific dq check. \n {json.dumps(allowed_checks,indent=1)}"
+        description=f"A string containing a *dict* of parameter name and value for the given dqCheckName. DO NOT convert this to a json array. Refer to this configuration to get the supported parameters for a specific dq check. \n {json.dumps(allowed_checks,indent=1)}"
     )
 
 

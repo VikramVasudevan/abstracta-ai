@@ -116,7 +116,7 @@ async def buildAPI(requirements):
             payload.serviceName,
             newServiceVersion,
         )
-        data = remove_dq(data)
+        # data = remove_dq(data)
         return data
 
     def makeComponentVisible(visible: bool = True):
@@ -126,7 +126,11 @@ async def buildAPI(requirements):
         if not dataframe:
             return gr.update(value=context[attribute], visible=visible)
         else:
-            return gr.update(value=pandas.DataFrame(context[attribute]), visible=visible)
+            df = pandas.DataFrame(context[attribute])
+            dq_df = pandas.json_normalize(df["_dq"])
+            df_flat = pandas.concat([df.drop(columns=["_dq"]), dq_df], axis=1)
+
+            return gr.update(value=df_flat, visible=visible)
 
     initial_outputs = (
         "Building API ... please wait.",  # status_message
