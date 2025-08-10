@@ -119,8 +119,14 @@ async def buildAPI(requirements):
         data = remove_dq(data)
         return data
 
-    def makeComponentVisible(visible : bool):
+    def makeComponentVisible(visible: bool = True):
         return gr.update(visible=visible)
+
+    def updateComponentData(context: any, attribute: str, visible: bool = True, dataframe : bool = False):
+        if not dataframe:
+            return gr.update(value=context[attribute], visible=visible)
+        else:
+            return gr.update(value=pandas.DataFrame(context[attribute]), visible=visible)
 
     initial_outputs = (
         "Building API ... please wait.",  # status_message
@@ -180,7 +186,9 @@ async def buildAPI(requirements):
             "name": "Generate API URL",
             "func": generateApiUrl,
             "yield": [
-                lambda context: gr.update(value=context["gen_api_url"], visible=True),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_api_url", visible=True
+                ),
                 lambda context: "",
                 lambda context: makeComponentVisible(visible=False),
                 lambda context: makeComponentVisible(visible=False),
@@ -191,8 +199,12 @@ async def buildAPI(requirements):
             "name": "Generate Web URL",
             "func": generateWebUrl,
             "yield": [
-                lambda context: gr.update(value=context["gen_api_url"], visible=True),
-                lambda context: gr.update(value=context["gen_web_url"], visible=True),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_api_url", visible=True
+                ),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_web_url", visible=True
+                ),
                 lambda context: makeComponentVisible(visible=False),
                 lambda context: makeComponentVisible(visible=False),
             ],
@@ -202,11 +214,17 @@ async def buildAPI(requirements):
             "name": "Fetching data from API",
             "func": fetchData,
             "yield": [
-                lambda context: gr.update(value=context["gen_api_url"], visible=True),
-                lambda context: gr.update(value=context["gen_web_url"], visible=True),
-                lambda context: gr.update(value=context["fetch_data"], visible=False),
-                lambda context: gr.update(
-                    value=pandas.DataFrame(context["fetch_data"]), visible=True
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_api_url", visible=True
+                ),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_web_url", visible=True
+                ),
+                lambda context: updateComponentData(
+                    context := context, attribute="fetch_data", visible=False
+                ),
+                lambda context: updateComponentData(
+                    context := context, attribute="fetch_data", visible=True, dataframe=True
                 ),
             ],
         },
