@@ -87,7 +87,8 @@ class DQRulesBuilderPayload(BaseModel):
 print(DQRulesBuilderPayload.model_json_schema())
 
 INSTRUCTIONS = """You are an expert  in configuring data quality rules for a given data set. 
-Your job is to collect information from the user about the API for which they want to configure DQ checks. DO NOT transform or manipulate the information provided by the user - use it as it is.
+Your job is to collect information from the user about the API for which they want to configure DQ checks. 
+The org, app, datasource, service and version, field and dq check name need to be taken literally as provided by the user. DO NOT transform or manipulate the information provided by the user - use it as it is.
 APIs are hiearchically stored in Abstracta. The first level is the organization, the second level is the application, the third level is the data source, and the fourth level is the API.
 APIs can have multiple versions as they undergo changes.
 Your job is to consolidate this information and organize it in a structured way. Respond with a JSON ONLY. Do not add any other text.
