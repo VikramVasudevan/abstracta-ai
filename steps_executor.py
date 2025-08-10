@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import gradio as gr
@@ -37,6 +38,7 @@ async def steps_executor(
     if initial_outputs is not None:
         logging.debug("Yielding initial outputs.")
         yield initial_outputs
+        await asyncio.sleep(0.5)
 
     total_steps = len(steps_info)
     step_names = [step["name"] for step in steps_info]
@@ -45,6 +47,7 @@ async def steps_executor(
         step_name = step["name"]
         step_key = step["key"]
         step_func = step["func"]
+        step_yield = step["yield"] # tuple of lambdas that consume context and return anything based on that context.
 
         logging.info("Starting step %d/%d: %s", i + 1, total_steps, step_name)
 
@@ -56,6 +59,7 @@ async def steps_executor(
 
         # Yield progress update before running the step
         yield (progress_html, "", "", gr.update(visible=False), gr.update(visible=False))
+        await asyncio.sleep(0.5)
 
         try:
             # Execute the async step function, passing the shared context dict
@@ -74,16 +78,20 @@ async def steps_executor(
         else:
             progress_html_done = ""
 
-        yield (progress_html_done, "", "", gr.update(visible=False), gr.update(visible=False))
+        #yield (progress_html_done, "", "", gr.update(visible=False), gr.update(visible=False))
+        yield (progress_html_done, *(f(context) for f in step_yield))
+        await asyncio.sleep(0.5)
 
     logging.info("All steps completed.")
 
     if final_outputs is not None:
         logging.debug("Yielding explicit final outputs.")
         yield final_outputs
+        await asyncio.sleep(0.5)
     else:
         logging.debug("Yielding default final message.")
-        yield (final_message, "", "", gr.update(visible=False), gr.update(visible=False))
+        yield (final_message, "", "", gr.update(visible=True), gr.update(visible=False))
+        await asyncio.sleep(0.5)
 
 
 def fn_report_build_progress(steps: list[str], current_step, animate=False):

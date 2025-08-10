@@ -1,6 +1,7 @@
 import logging
 import gradio as gr
 from dotenv import load_dotenv
+import pandas
 from abstracta_client import AbstractaClient
 from api_builder_agent import apiBuilderAgent
 from agents import Runner, trace
@@ -29,9 +30,7 @@ async def buildDataQualityRulesForExistingAPI(requirements):
         payload_result = context.get("construct_payload")
         logging.info("access_token = %s", access_token)
         logging.info("payload_result = %s", payload_result)
-        return AbstractaClient().add_data_quality_rule(
-            access_token, payload_result
-        )
+        return AbstractaClient().add_data_quality_rule(access_token, payload_result)
 
     async def generateApiUrl(context):
         payload = context.get("construct_payload")
@@ -87,20 +86,70 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             "key": "construct_payload",
             "name": "Constructing Data Quality Rule Builder Payload",
             "func": buildPayload,
+            "yield": [
+                lambda context: "",
+                lambda context: "",
+                lambda context: gr.update(visible=False),
+                lambda context: gr.update(visible=False),
+            ],
         },
         {
             "key": "abstracta_auth",
             "name": "Authenticating to Abstracta API",
             "func": performAuth,
+            "yield": [
+                lambda context: "",
+                lambda context: "",
+                lambda context: gr.update(visible=False),
+                lambda context: gr.update(visible=False),
+            ],
         },
         {
             "key": "create_dq_rule",
             "name": "Creating Data Quality Rule",
             "func": createDataQualityRule,
+            "yield": [
+                lambda context: "",
+                lambda context: "",
+                lambda context: gr.update(visible=False),
+                lambda context: gr.update(visible=False),
+            ],
         },
-        {"key": "gen_api_url", "name": "Generate API URL", "func": generateApiUrl},
-        {"key": "gen_web_url", "name": "Generate Web URL", "func": generateWebUrl},
-        {"key": "fetch_data", "name": "Fetching data from API", "func": fetchData},
+        {
+            "key": "gen_api_url",
+            "name": "Generate API URL",
+            "func": generateApiUrl,
+            "yield": [
+                lambda context: gr.update(value=context["gen_api_url"], visible=True),
+                lambda context: "",
+                lambda context: gr.update(visible=False),
+                lambda context: gr.update(visible=False),
+            ],
+        },
+        {
+            "key": "gen_web_url",
+            "name": "Generate Web URL",
+            "func": generateWebUrl,
+            "yield": [
+                lambda context: gr.update(value=context["gen_api_url"], visible=True),
+                lambda context: gr.update(value=context["gen_web_url"], visible=True),
+                lambda context: gr.update(visible=False),
+                lambda context: gr.update(visible=False),
+            ],
+        },
+        {
+            "key": "fetch_data",
+            "name": "Fetching data from API",
+            "func": fetchData,
+            "yield": [
+                lambda context: gr.update(value=context["gen_api_url"], visible=True),
+                lambda context: gr.update(value=context["gen_web_url"], visible=True),
+                lambda context: gr.update(value=context["fetch_data"], visible=True),
+                lambda context: gr.update(
+                    value=pandas.DataFrame(context["fetch_data"]), visible=True
+                ),
+            ],
+        },
         # Add more steps
     ]
 
@@ -114,4 +163,4 @@ async def buildDataQualityRulesForExistingAPI(requirements):
         final_outputs=None,
     ):
         logging.debug("results = %s", step)
-        yield f"{step}", None, None
+        yield step

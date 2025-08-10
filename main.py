@@ -242,7 +242,7 @@ def render():
             buildDqRulesBtn.click(
                 buildDataQualityRulesForExistingAPI,
                 inputs=[requirements],
-                outputs=[status_message, json_view, dataframe_view],
+                outputs=[status_message, api_url, web_url, json_view, dataframe_view],
             )
             requirements.change(
                 fn=requirements_on_change,
