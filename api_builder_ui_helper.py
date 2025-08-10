@@ -119,12 +119,15 @@ async def buildAPI(requirements):
         data = remove_dq(data)
         return data
 
+    def makeComponentVisible(visible : bool):
+        return gr.update(visible=visible)
+
     initial_outputs = (
         "Building API ... please wait.",  # status_message
         "",  # api_url
         "",  # web_url
-        gr.update(visible=False),  # json_view
-        gr.update(visible=False),  # dataframe_view
+        makeComponentVisible(visible=False),  # json_view
+        makeComponentVisible(visible=False),  # dataframe_view
     )
 
     steps_info = [
@@ -135,8 +138,8 @@ async def buildAPI(requirements):
             "yield": [
                 lambda context: "",
                 lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -146,8 +149,8 @@ async def buildAPI(requirements):
             "yield": [
                 lambda context: "",
                 lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -157,8 +160,8 @@ async def buildAPI(requirements):
             "yield": [
                 lambda context: "",
                 lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -168,8 +171,8 @@ async def buildAPI(requirements):
             "yield": [
                 lambda context: "",
                 lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -179,8 +182,8 @@ async def buildAPI(requirements):
             "yield": [
                 lambda context: gr.update(value=context["gen_api_url"], visible=True),
                 lambda context: "",
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
@@ -190,8 +193,8 @@ async def buildAPI(requirements):
             "yield": [
                 lambda context: gr.update(value=context["gen_api_url"], visible=True),
                 lambda context: gr.update(value=context["gen_web_url"], visible=True),
-                lambda context: gr.update(visible=False),
-                lambda context: gr.update(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
             ],
         },
         {
