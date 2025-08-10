@@ -48,6 +48,7 @@ async def steps_executor(
         step_key = step["key"]
         step_func = step["func"]
         step_yield = step["yield"] # tuple of lambdas that consume context and return anything based on that context.
+        step_yield_before = step["yield_before"] if "yield_before" in step else []
 
         logging.info("Starting step %d/%d: %s", i + 1, total_steps, step_name)
 
@@ -58,7 +59,10 @@ async def steps_executor(
             progress_html = ""
 
         # Yield progress update before running the step
-        yield (progress_html, "", "", gr.update(visible=False), gr.update(visible=False))
+        if step_yield_before:
+            yield (progress_html, *(f(context) for f in step_yield_before))
+        else:
+            yield (progress_html, "", "", gr.update(visible=False), gr.update(visible=False))
         await asyncio.sleep(0.5)
 
         try:

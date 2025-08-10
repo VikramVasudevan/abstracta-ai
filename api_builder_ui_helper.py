@@ -198,6 +198,14 @@ async def buildAPI(requirements):
             "key": "gen_web_url",
             "name": "Generate Web URL",
             "func": generateWebUrl,
+            "yield_before" : [
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_api_url", visible=True
+                ),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),                
+            ],            
             "yield": [
                 lambda context: updateComponentData(
                     context := context, attribute="gen_api_url", visible=True
@@ -213,6 +221,16 @@ async def buildAPI(requirements):
             "key": "fetch_data",
             "name": "Fetching data from API",
             "func": fetchData,
+            "yield_before": [
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_api_url", visible=True
+                ),
+                lambda context: updateComponentData(
+                    context := context, attribute="gen_web_url", visible=True
+                ),
+                lambda context: makeComponentVisible(visible=False),
+                lambda context: makeComponentVisible(visible=False),
+            ],
             "yield": [
                 lambda context: updateComponentData(
                     context := context, attribute="gen_api_url", visible=True
