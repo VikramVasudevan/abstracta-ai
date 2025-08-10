@@ -133,7 +133,7 @@ async def buildAPI(requirements):
             return gr.update(value=df_flat, visible=visible)
 
     initial_outputs = (
-        "Building API ... please wait.",  # status_message
+        gr.update(value="Building API ... please wait.", visible=True),  # status_message
         "",  # api_url
         "",  # web_url
         makeComponentVisible(visible=False),  # json_view

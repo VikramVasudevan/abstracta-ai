@@ -192,8 +192,6 @@ def render():
                             "⚡ Build DQ Rules", variant="primary", interactive=False
                         )
 
-                    status_message = gr.HTML(label="Progress")
-
                 with gr.Column(scale=3):
                     with gr.Row():
                         btn_df = gr.Button(
@@ -206,6 +204,11 @@ def render():
                         gr.Column(scale=1)  # Empty label as spacer                        
                         api_url = gr.Markdown("", elem_classes="output-card")
                         web_url = gr.Markdown("", elem_classes="output-card")
+                    
+                    with gr.Row(scale=0):
+                        gr.Column(scale=1)
+                        status_message = gr.HTML(label="Progress", visible=False)
+                        gr.Column(scale=1)
                     json_view = gr.JSON(value=[], visible=False)
                     dataframe_view = gr.Dataframe(
                         value=None, show_search="filter", visible=False

@@ -84,7 +84,7 @@ async def buildDataQualityRulesForExistingAPI(requirements):
             return gr.update(value=df_flat, visible=visible)
 
     initial_outputs = (
-        "Building Data Quality Rules ... please wait.",  # status_message
+        gr.update(value="Building Data Quality Rules ... please wait.", visible=True),  # status_message
         "",  # api_url
         "",  # web_url
         gr.update(visible=False),  # json_view
@@ -94,7 +94,7 @@ async def buildDataQualityRulesForExistingAPI(requirements):
     steps_info = [
         {
             "key": "construct_payload",
-            "name": "Constructing Data Quality Rule Builder Payload",
+            "name": "Constructing DQ Rule Builder Payload",
             "func": buildPayload,
             "yield": [
                 lambda context: "",
