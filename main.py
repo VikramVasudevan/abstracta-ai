@@ -119,6 +119,7 @@ def requirements_on_change(requirements):
         interactive=bool(requirements.strip())
     )
 
+
 # --------------------- RENDER UI ---------------------
 
 
@@ -146,6 +147,10 @@ def render():
             "I want to build an API called ai_driven_api_001 which connects to the backend resource production.products in the datasource demo_ds_001"
             "and store it under application demo_app_001 in organization demo_org_001. "
         ),
+        (
+            "for my API demo_org_001/demo_app_001/demo_ds_001/salesorderitems/0.0.0, "
+            "add a dq rule for the field `list_price` to ensure it  remains in range 300-500"
+        ),
     ]
 
     with gr.Blocks(
@@ -162,7 +167,7 @@ def render():
                     requirements = gr.TextArea(
                         placeholder="E.g. Build an API in org demo_org_001...",
                         lines=4,
-                        label="Describe your API",
+                        label="Describe your requirement",
                     )
 
                     with gr.Row():
