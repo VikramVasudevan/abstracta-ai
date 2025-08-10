@@ -21,6 +21,10 @@ from dotenv import load_dotenv
 from abstracta_client import AbstractaClient
 from api_builder_agent import apiBuilderAgent
 from agents import Runner, trace
+from api_builder_ui_helper import buildAPI
+from dq_rules_ui_helper import buildDataQualityRulesForExistingAPI
+from markdown_formatter import format_url_as_markdown
+from steps_executor import steps_executor, fn_report_build_progress
 
 
 # --------------------- LOGGING CONFIG ---------------------
@@ -29,16 +33,6 @@ logging.basicConfig(
     format="[%(asctime)s] %(levelname)s - %(message)s",
     datefmt="%H:%M:%S",
 )
-
-
-def remove_dq(obj):
-    """Recursively remove any '_dq' keys from dicts/lists."""
-    if isinstance(obj, dict):
-        return {k: remove_dq(v) for k, v in obj.items() if k != "_dq"}
-    elif isinstance(obj, list):
-        return [remove_dq(item) for item in obj]
-    else:
-        return obj
 
 
 async def typewriter_effect(example_text):
@@ -119,172 +113,11 @@ def get_data_sources(org_name, app_name):
 # --------------------- UTILS ---------------------
 
 
-def format_url_as_markdown(label, url):
-    """Format a clickable markdown link."""
-    return f"### {label}\n[{label}]({url})"
-
-
 def requirements_on_change(requirements):
     """Enable or disable build button based on text area content."""
-    return gr.update(interactive=bool(requirements.strip()))
-
-
-# --------------------- MAIN API BUILD PROCESS ---------------------
-
-
-async def gatherInfo(requirements):
-    """
-    Main async function that runs the API build process.
-    Yields status updates at each step for live progress display.
-    """
-    # Step 0 — Hide outputs immediately
-    yield (
-        "Building API... please wait.",  # status_message
-        "",  # api_url
-        "",  # web_url
-        gr.update(visible=False),  # json_view
-        gr.update(visible=False),  # dataframe_view
+    return gr.update(interactive=bool(requirements.strip())), gr.update(
+        interactive=bool(requirements.strip())
     )
-
-    steps = [
-        "Generating API based on your requirements",
-        "Constructing API Builder Payload",
-        "Authenticating to Abstracta API",
-        "Creating API",
-        "Granting service access",
-        "Generating API URLs",
-        "Fetching data from API",
-        "Finalizing results",
-    ]
-    total_steps = len(steps)
-
-    def build_progress(current_step, animate=False):
-        """Return HTML showing step progress with optional animation."""
-        html = "<ul style='list-style:none;padding:0'>"
-        for i, step in enumerate(steps):
-            if i < current_step:
-                html += f"<li>✅ <b>{step}</b></li>"
-            elif i == current_step:
-                dots = "." * ((int(time.time() * 2) % 3) + 1) if animate else ""
-                html += f"<li>⏳ <b>{step}{dots}</b></li>"
-            else:
-                html += f"<li>⬜ {step}</li>"
-        html += "</ul>"
-
-        percent = int((current_step / total_steps) * 100)
-        html += (
-            f"<div style='background:#eee;border-radius:8px;height:12px;overflow:hidden;margin-top:8px'>"
-            f"<div style='background:#2563eb;height:100%;width:{percent}%;transition:width 0.3s'></div>"
-            f"</div>"
-        )
-        return html
-
-    logging.info(f"User request: {requirements}")
-
-    # Step 0 - start
-    yield build_progress(0, True), "", "", [], []
-    with trace("abstracta-builder-agent"):
-        payload_result = await Runner.run(apiBuilderAgent, requirements)
-    # Step 0 - done
-    yield build_progress(0, False), "", "", [], []
-    await asyncio.sleep(0.5)
-
-    # Step 1 - start
-    yield build_progress(1, True), "", "", [], []
-    access_token = AbstractaClient().perform_auth()
-    # Step 1 - done
-    yield build_progress(1, False), "", "", [], []
-    await asyncio.sleep(0.5)
-
-    # Step 2 - start
-    yield build_progress(2, True), "", "", [], []
-    payload = payload_result.final_output
-    apiCreationResponse = AbstractaClient().create_api(access_token, payload)
-    logging.info("API created successfully.")
-    # Step 2 - done
-    yield build_progress(2, False), "", "", [], []
-    await asyncio.sleep(0.5)
-
-    # Step 3 - start
-    yield build_progress(3, True), "", "", [], []
-    newServiceVersion = apiCreationResponse["service-info"]["tables"][0]["dtbl_version"]
-    AbstractaClient().grant_service_access(
-        access_token,
-        payload.orgName,
-        payload.appName,
-        payload.datasourceName,
-        payload.serviceName,
-        newServiceVersion,
-        [os.getenv("ABSTRACTA_FOR_USER") or ""],
-        ["VIEWER", "EDITOR", "CREATOR"],
-    )
-    logging.info("Service access granted.")
-    # Step 3 - done
-    yield build_progress(3, False), "", "", [], []
-    await asyncio.sleep(0.5)
-
-    # Step 4 - start
-    yield build_progress(4, True), "", "", [], []
-    new_api_url = format_url_as_markdown(
-        "API URL",
-        AbstractaClient().generate_api_url(
-            payload.orgName,
-            payload.appName,
-            payload.datasourceName,
-            payload.serviceName,
-            newServiceVersion,
-        ),
-    )
-    new_web_url = format_url_as_markdown(
-        "Web URL",
-        AbstractaClient().generate_web_url(
-            payload.orgName,
-            payload.appName,
-            payload.datasourceName,
-            payload.serviceName,
-            newServiceVersion,
-        ),
-    )
-    # Step 4 - done
-    yield build_progress(4, False), new_api_url, new_web_url, [], []
-    await asyncio.sleep(0.5)
-
-    # Step 5 - start
-    yield build_progress(5, True), new_api_url, new_web_url, [], []
-    data = AbstractaClient().get_data(
-        access_token,
-        payload.orgName,
-        payload.appName,
-        payload.datasourceName,
-        payload.serviceName,
-        newServiceVersion,
-    )
-    data = remove_dq(data)
-
-    # Step 5 - done
-    yield build_progress(5, False), new_api_url, new_web_url, data, pandas.DataFrame(
-        data
-    )
-    await asyncio.sleep(0.5)
-
-    # Step 6 - start (finalizing)
-    yield build_progress(6, True), new_api_url, new_web_url, data, pandas.DataFrame(
-        data
-    )
-    logging.info("Process completed successfully.")
-    # Step 6 - done
-    yield (
-        "✅ API built successfully!",
-        new_api_url,
-        new_web_url,
-        gr.update(value=data, visible=False),
-        gr.update(value=pandas.DataFrame(data), visible=True),
-    )
-    # yield build_progress(
-    #     total_steps, False
-    # ), new_api_url, new_web_url, data, pandas.DataFrame(data)
-    await asyncio.sleep(0.5)
-
 
 # --------------------- RENDER UI ---------------------
 
@@ -319,9 +152,9 @@ def render():
         theme=theme,
         title="Abstracta AI-Driven API Builder",
     ) as demo:
-        with gr.Tab("🚀 API Builder"):
+        with gr.Tab("🚀 Abstracta™ API Builder"):
             gr.Markdown(
-                "## Abstracta AI-Driven API Builder\nDescribe your API requirements and let AI do the rest!"
+                "## Abstracta™ AI-Driven API Builder\nDescribe your API requirements and let AI do the rest!"
             )
 
             with gr.Row():
@@ -346,17 +179,26 @@ def render():
                                 fn=make_handler(ex), inputs=[], outputs=requirements
                             )
 
-                    submitBtn = gr.Button(
-                        "⚡ Build API", variant="primary", interactive=False
-                    )
+                    with gr.Row():
+                        buildAPIBtn = gr.Button(
+                            "⚡ Build API", variant="primary", interactive=False
+                        )
+                        buildDqRulesBtn = gr.Button(
+                            "⚡ Build DQ Rules", variant="primary", interactive=False
+                        )
+
                     status_message = gr.HTML(label="Progress")
                     api_url = gr.Markdown("", elem_classes="output-card")
                     web_url = gr.Markdown("", elem_classes="output-card")
 
                 with gr.Column(scale=3):
                     with gr.Row():
-                        btn_df = gr.Button("📊 DataFrame View", size="sm", variant="primary", scale=0)
-                        btn_json = gr.Button("📝 JSON View", size="sm", variant="secondary", scale=0)
+                        btn_df = gr.Button(
+                            "📊 DataFrame View", size="sm", variant="primary", scale=0
+                        )
+                        btn_json = gr.Button(
+                            "📝 JSON View", size="sm", variant="secondary", scale=0
+                        )
                     json_view = gr.JSON(value=[], visible=False)
                     dataframe_view = gr.Dataframe(
                         value=None, show_search="filter", visible=False
@@ -392,22 +234,29 @@ def render():
                         [dataframe_view, json_view, btn_df, btn_json],
                     )
 
-            submitBtn.click(
-                gatherInfo,
+            buildAPIBtn.click(
+                buildAPI,
                 inputs=[requirements],
                 outputs=[status_message, api_url, web_url, json_view, dataframe_view],
             )
+            buildDqRulesBtn.click(
+                buildDataQualityRulesForExistingAPI,
+                inputs=[requirements],
+                outputs=[status_message, json_view, dataframe_view],
+            )
             requirements.change(
-                fn=requirements_on_change, outputs=[submitBtn], inputs=[requirements]
+                fn=requirements_on_change,
+                outputs=[buildAPIBtn, buildDqRulesBtn],
+                inputs=[requirements],
             )
 
-        with gr.Tab("📂 Data Previewer"):
-            gr.Markdown("### Browse and Preview Your Abstracta Data")
+        with gr.Tab("📂 Abstracta™ Data Previewer"):
+            gr.Markdown("### Your Data, Ready to Explore")
 
             with gr.Row():
                 with gr.Column(scale=1):
                     orgDropDown = gr.Dropdown(
-                        label="Organization", choices=get_organizations()
+                        label="Organization", choices=[""] + get_organizations()
                     )
                     appDropDown = gr.Dropdown(label="Application")
                     datasourceDropDown = gr.Dropdown(label="Datasource")
@@ -417,7 +266,7 @@ def render():
                         visible=False,
                     )
 
-                with gr.Column(scale=2):
+                with gr.Column(scale=4):
                     abstractaWebHyperLink = gr.Markdown("")
                     dataFrame = gr.DataFrame(
                         value=[], show_search="filter", label="Preview"

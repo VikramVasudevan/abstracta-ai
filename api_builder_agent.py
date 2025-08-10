@@ -151,7 +151,7 @@ Your job is to consolidate this information and organize it in a structured way.
 apiBuilderAgent = Agent(
     name="APIBuilderAgent",
     instructions="Generate the API builder payload.",
-    model="gpt-4o-mini",
+    model="gpt-5-nano",
     output_type=APIBuilderPayload,
     # output_type=str
 )
