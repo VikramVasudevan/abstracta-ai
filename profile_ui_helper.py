@@ -8,8 +8,8 @@ from markdown_formatter import format_url_as_markdown
 from profile_builder_agent import profileBuilderAgent
 from steps_executor import steps_executor, fn_report_build_progress
 
-async def createProfile(requirements):
 
+async def createProfile(requirements):
     """
     Main async function that runs the data quality rules building process.
     Yields status updates at each step for live progress display.
@@ -108,7 +108,7 @@ async def createProfile(requirements):
                 lambda context: makeComponentVisible(visible=False),
                 lambda context: makeComponentVisible(visible=False),
             ],
-        }
+        },
         # Add more steps
     ]
 
@@ -119,7 +119,13 @@ async def createProfile(requirements):
         initial_outputs=initial_outputs,
         build_progress_fn=fn_report_build_progress,
         final_message="✅ All done!",
-        final_outputs=None,
+        final_outputs=(
+            gr.update(value="✅ All done!", visible=True),
+            "",
+            "",
+            makeComponentVisible(visible=False),
+            makeComponentVisible(visible=False),
+        ),
     ):
         logging.debug("results = %s", step)
         yield step
