@@ -109,8 +109,10 @@ def get_data_sources(org_name, app_name):
 
 def requirements_on_change(requirements):
     """Enable or disable build button based on text area content."""
-    return gr.update(interactive=bool(requirements.strip())), gr.update(
-        interactive=bool(requirements.strip())
+    return (
+        gr.update(interactive=bool(requirements.strip())),
+        gr.update(interactive=bool(requirements.strip())),
+        gr.update(interactive=bool(requirements.strip())),
     )
 
 
@@ -144,6 +146,9 @@ def render():
         (
             "For my API `demo_org_001/demo_app_001/demo_ds_001/salesorderitems/0.0.0`, "
             "add a dq rule for the field `list_price` to ensure it  remains in range 300-500"
+        ),
+        (
+            "In my org demo_org_001, I want to create a profile with key region and value Asia. Assign this profile to the following users: vikram.vasudevan@ekahaa.com, test_user@ekahaa.com"
         ),
     ]
 
@@ -186,7 +191,9 @@ def render():
                             "📊 Build DQ", variant="primary", interactive=False
                         )
                         createProfileBtn = gr.Button(
-                            "🛡️ Build Data Security Profile", variant="primary", interactive=False
+                            "🛡️ Build Data Security Profile",
+                            variant="primary",
+                            interactive=False,
                         )
 
                 with gr.Column(scale=3):
@@ -198,10 +205,10 @@ def render():
                             "📝 JSON View", size="sm", variant="secondary", scale=0
                         )
                         # Spacer that expands to push markdowns right
-                        gr.Column(scale=1)  # Empty label as spacer                        
+                        gr.Column(scale=1)  # Empty label as spacer
                         api_url = gr.Markdown("", elem_classes="output-card")
                         web_url = gr.Markdown("", elem_classes="output-card")
-                    
+
                     with gr.Row(scale=0):
                         gr.Column(scale=1)
                         status_message = gr.HTML(label="Progress", visible=False)
@@ -259,7 +266,7 @@ def render():
 
             requirements.change(
                 fn=requirements_on_change,
-                outputs=[buildAPIBtn, buildDqRulesBtn],
+                outputs=[buildAPIBtn, buildDqRulesBtn, createProfileBtn],
                 inputs=[requirements],
             )
 
