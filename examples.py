@@ -22,9 +22,21 @@ examples = [
         "In my org demo_org_001, I want to create a profile with key region and value Asia. Assign this profile to the following users: vikram.vasudevan@ekahaa.com, test_user@ekahaa.com"
     ),
     (
+        "I want to build an API located in `demo_org_001` under the app `demo_app_001` for the datasource `demo_ds_001`. "
+        "The API name should be `get_sales_orders_for_ny`. "
+        "The API is of type `CUSTOMSQL` and uses the SQL below:\n"
         """
 select orders.*, stores.store_name, stores.state, stores.city 
 from [sales].[orders] inner join [sales].[stores] on (stores.store_id = orders.store_id) 
 where stores.state = 'NY'"""
+    ),
+    (
+        "- I want to build an API located in `demo_org_001` under the app `demo_app_001` for the datasource `demo_ds_001`. \n"
+        "- You must name the API as `get_sales_orders_for_my_region`. \n"
+        "- Ensure data security filter must be set to:\n state in ( %(PROFILE:region)% ) \n"
+        "- The API is of type `CUSTOMSQL` and uses the SQL below:\n"
+        """
+select orders.*, stores.store_name, stores.state, stores.city 
+from [sales].[orders] inner join [sales].[stores] on (stores.store_id = orders.store_id)"""
     ),
 ]

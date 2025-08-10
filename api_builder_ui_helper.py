@@ -127,8 +127,11 @@ async def buildAPI(requirements):
             return gr.update(value=context[attribute], visible=visible)
         else:
             df = pandas.DataFrame(context[attribute])
-            dq_df = pandas.json_normalize(df["_dq"])
-            df_flat = pandas.concat([df.drop(columns=["_dq"]), dq_df], axis=1)
+            try:
+                dq_df = pandas.json_normalize(df["_dq"])
+                df_flat = pandas.concat([df.drop(columns=["_dq"]), dq_df], axis=1)
+            except:
+                df_flat = df
 
             return gr.update(value=df_flat, visible=visible)
 
