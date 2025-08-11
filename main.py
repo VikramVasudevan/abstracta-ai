@@ -169,7 +169,6 @@ def render():
                         label="Describe your requirement",
                     )
 
-                    
                     for idx, category in enumerate(examples):
                         # Use partial application so we can pass args to an async generator
                         def make_handler(text):
