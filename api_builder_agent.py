@@ -1,102 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, Literal, Dict
-from agents import Agent
-
-# apiBuilderPayloadSchema = {
-#     "name": "APIBuilderPayload",
-#     "schema": {
-#         "type": "object",
-#         "properties": {
-#             "serviceName": {
-#                 "type": "string",
-#                 "description": "The name of the service used to query the data source",
-#             },
-#             "serviceDisplayName": {
-#                 "type": "string",
-#                 "description": "The display name of the service",
-#             },
-#             "serviceDesc": {
-#                 "type": "string",
-#                 "description": "The description of the service",
-#             },
-#             "orgName": {
-#                 "type": "string",
-#                 "description": "The organization name used for querying",
-#             },
-#             "appName": {
-#                 "type": "string",
-#                 "description": "The application name inside the organization",
-#             },
-#             "datasourceName": {
-#                 "type": "string",
-#                 "description": "The data source name inside the app",
-#             },
-#             "originalResourceName": {
-#                 "type": "string",
-#                 "description": "The backend resource name",
-#             },
-#             "serviceType": {
-#                 "type": "string",
-#                 "enum": ["DIRECT", "CUSTOMSQL"],
-#                 "description": "Service type: DIRECT or CUSTOMSQL",
-#             },
-#             "serviceCustomSQL": {
-#                 "type": "string",
-#                 "description": "Custom SQL query (for CUSTOMSQL only)",
-#             },
-#             "connectorType": {
-#                 "type": "string",
-#                 "enum": ["rdbms"],
-#                 "description": "The connector type, always 'rdbms'",
-#             },
-#             "sampleParameterValues": {
-#                 "type": "object",
-#                 "description": "Parameter name/value pairs",
-#                 "properties": {
-#                     "Placeholder1": {
-#                         "type": "string",
-#                         "description": "Placeholder - replace with the strict field you want",
-#                     }
-#                 },
-#                 "required": ["Placeholder1"],
-#                 "additionalProperties": False,
-#             },
-#             "versionComments": {
-#                 "type": "string",
-#                 "description": "Comments for this version",
-#             },
-#             "versionType": {
-#                 "type": "string",
-#                 "enum": ["MAJOR", "MINOR", "REVISION"],
-#                 "description": "Version type: MAJOR, MINOR, or REVISION",
-#             },
-#             "dataSecurityFilter": {
-#                 "type": "string",
-#                 "description": "The data security filter",
-#                 "default" : ""
-#             },
-#         },
-#         "required": [
-#             "serviceName",
-#             "serviceDisplayName",
-#             "serviceDesc",
-#             "orgName",
-#             "appName",
-#             "datasourceName",
-#             "originalResourceName",
-#             "serviceType",
-#             "serviceCustomSQL",
-#             "connectorType",
-#             "sampleParameterValues",
-#             "versionComments",
-#             "versionType",
-#             "dataSecurityFilter",
-#         ],
-#         "additionalProperties": False,
-#     },
-#     "strict": True,
-# }
-
+from agents import Agent, ModelSettings
 
 class SampleParameterValues(BaseModel):
     id: str = Field(description="Sample parameter name and value")  # dummy key
@@ -141,17 +45,48 @@ class APIBuilderPayload(BaseModel):
 
 print(APIBuilderPayload.model_json_schema())
 
-INSTRUCTIONS = """You are an expert API builder agent. 
-Your job is to collect information from the user about the API they want to build. 
-APIs are hiearchically stored in Abstracta. The first level is the organization, the second level is the application, the third level is the data source, and the fourth level is the API.
-APIs can have multiple versions as they undergo changes. hardcode sampleParameterValues to {}.
-Your job is to consolidate this information and organize it in a structured way. Respond with a JSON ONLY. Do not add any other text.
+INSTRUCTIONS = """
+🚫 ABSOLUTE SQL RULES 🚫
+1. NEVER use parameters or placeholders in SQL:
+   - Examples of banned syntax: `@region`, `${region}`, `:region`, `{region}`, `?`, `$1`
+2. NEVER insert profile filter syntax or literal values directly into SQL.
+3. NEVER use \\n in SQL — must be a single continuous line.
+4. If the user specifies any profile-based filtering condition (e.g., by region, state, date), store it in `dataSecurityFilter` only.
+5. Literal filters may be kept part of the serviceCustomSQL
+6. NEVER add a semicolon(;) at the end of the generated custom SQL
+
+✅ Example of correct filter handling:
+- dataSecurityFilter: "s.state IN (%(PROFILE:my_allowed_states)%)"
+- serviceCustomSQL: "SELECT o.* FROM sales.orders AS o JOIN sales.stores AS s ON o.store_id = s.store_id"
+
+✅ Example without filter:
+- dataSecurityFilter: ""
+- serviceCustomSQL: "SELECT o.* FROM sales.orders AS o JOIN sales.stores AS s ON o.store_id = s.store_id"
+
+---
+
+Your job:
+1. Collect all required API details.
+2. APIs are stored hierarchically: organization → application → data source → API.
+3. Always hardcode `sampleParameterValues` to `{}`.
+4. The `dataSecurityFilter` field must exactly match the filtering clause (without the `WHERE` keyword).
+5. The `serviceCustomSQL` must not include the `{dataSecurityFilter}`. and it should not include a semicolon at the end.
+6. Respond in JSON ONLY, following APIBuilderPayload schema.
+7. Do not add commentary, markdown, or explanations.
+
+REPEAT: No variables in SQL. No profile syntax in SQL. All profile based filters go in `dataSecurityFilter`..
 """
+
+
+
 # Agent definition (unchanged)
+model_settings = ModelSettings(temperature=0.7)  #
+
 apiBuilderAgent = Agent(
     name="APIBuilderAgent",
     instructions="Generate the API builder payload.",
-    model="gpt-5-nano",
+    model="gpt-4o-mini",
     output_type=APIBuilderPayload,
     # output_type=str
+    model_settings=model_settings
 )

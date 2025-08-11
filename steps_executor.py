@@ -71,7 +71,7 @@ async def steps_executor(
             logging.info("Completed step '%s' successfully.", step_name)
         except Exception as e:
             logging.error("Error in step '%s': %s", step_name, e, exc_info=True)
-            yield (progress_html.replace("⏳","❌") + f"<br>❌❌❌ <code>{e}</code>", "", "", gr.update(visible=False), gr.update(visible=False))
+            yield (progress_html.replace("⏳","❌") + f"<br>❌❌❌ <code>{e}</code>", *(f(context) for f in step_yield))
             raise
 
         # Store the result keyed by step name in context for downstream steps

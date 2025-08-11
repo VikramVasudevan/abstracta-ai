@@ -39,4 +39,10 @@ where stores.state = 'NY'"""
 select orders.*, stores.store_name, stores.state, stores.city 
 from [sales].[orders] inner join [sales].[stores] on (stores.store_id = orders.store_id)"""
     ),
+    (
+        "- I want to build an API located in `demo_org_001` under the app `demo_app_001` for the datasource `demo_ds_001`. \n"
+        "- You must name the API as `get_sales_orders_for_my_region`. \n"
+        "- The API is of type `CUSTOMSQL` created using the requirement as below:\n"
+        "Get me all [sales].[orders] along with the store name. Stores are available in [sales].[stores] table. do not add a semicolon at the end of the customsql."
+    ),
 ]
