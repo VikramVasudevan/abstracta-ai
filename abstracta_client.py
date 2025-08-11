@@ -17,7 +17,7 @@ ABSTRACTA_WEB_URL = "http://localhost/services"
 class AbstractaClient:
     def __init__(self) -> None:
         self.organizations = []
-        self.users=[]
+        self.users = []
 
     def perform_auth(self):
         url = self.generate_auth_url()
@@ -48,16 +48,7 @@ class AbstractaClient:
     def generate_system_api_url(self, service: str, version: str):
         return self.generate_api_url("ekahaa", "abstracta", "dq_repo", service, version)
 
-    def get_data(
-        self,
-        access_token: str,
-        org: str,
-        app: str,
-        datasource: str,
-        service: str,
-        version: str,
-    ):
-        url = self.generate_api_url(org, app, datasource, service, version)
+    def get_data_from_api_url(self, access_token: str, api_url: str):
         headers = {"Authorization": f"Bearer {access_token}"}
 
         payload = {
@@ -70,13 +61,25 @@ class AbstractaClient:
             "forUserSecret": os.getenv("ABSTRACTA_FOR_USER_SECRET"),
         }
 
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(api_url, headers=headers, json=payload)
         if response.status_code == 200:
             return response.json()
         else:
             raise Exception(
                 f"Failed to get data: {response.status_code} {response.text}"
             )
+
+    def get_data(
+        self,
+        access_token: str,
+        org: str,
+        app: str,
+        datasource: str,
+        service: str,
+        version: str,
+    ):
+        url = self.generate_api_url(org, app, datasource, service, version)
+        return self.get_data_from_api_url(access_token=access_token, api_url=url)
 
     def get_data_sources(self, access_token: str, org: str, app: str):
         request_url = self.generate_system_api_url("dq_databases", "0.0.0")
@@ -278,7 +281,9 @@ class AbstractaClient:
             self.get_organizations(access_token=access_token)
         try:
             org_id = [
-                org["org_sys_no"] for org in self.organizations if org["org_name"] == payload.orgName
+                org["org_sys_no"]
+                for org in self.organizations
+                if org["org_name"] == payload.orgName
             ][0]
         except:
             raise Exception(f"unable to find a match for org {payload.orgName}")
@@ -315,7 +320,9 @@ class AbstractaClient:
 
         try:
             org_id = [
-                org["org_sys_no"] for org in self.organizations if org["org_name"] == payload.orgName
+                org["org_sys_no"]
+                for org in self.organizations
+                if org["org_name"] == payload.orgName
             ][0]
         except:
             raise Exception(f"unable to find a match for org {payload.orgName}")

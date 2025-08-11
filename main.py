@@ -11,6 +11,7 @@ automatically builds the API using Abstracta's services. It includes:
 
 import asyncio
 import logging
+import re
 import pandas
 import gradio as gr
 import gradio.themes as themes
@@ -29,6 +30,22 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 
+def refreshData(api_url_markdown):
+    print("api_url = ", api_url_markdown)
+    # Regex pattern to capture the URL part of a Markdown link
+    # It looks for text inside parentheses () after a closing square bracket ]
+    url_pattern = r"\]\((.*?)\)"
+
+    match = re.search(url_pattern, api_url_markdown)
+
+    if match:
+        url = match.group(1)
+        print(url)    
+        abstractaClient = AbstractaClient()
+        data = abstractaClient.get_data_from_api_url(access_token=abstractaClient.perform_auth(), api_url=url)
+        return [gr.update(value=pandas.DataFrame(data), visible=True),gr.update(value=data, visible=False)]
+    else:
+        raise Exception("No API url defined!")
 
 async def typewriter_effect(example_text):
     """Yields text one character at a time to simulate typing."""
@@ -184,7 +201,9 @@ def render():
                         gr.Column(scale=1)  # Empty label as spacer
                         api_url = gr.Markdown("", elem_classes="output-card")
                         web_url = gr.Markdown("", elem_classes="output-card")
-
+                        btn_refresh = gr.Button(
+                            "⟳ Refresh", size="sm", variant="primary", scale=0
+                        )
                     with gr.Row(scale=0):
                         gr.Column(scale=1)
                         status_message = gr.HTML(label="Progress", visible=False)
@@ -223,6 +242,7 @@ def render():
                         None,
                         [dataframe_view, json_view, btn_df, btn_json],
                     )
+                    btn_refresh.click(refreshData,[api_url],[dataframe_view, json_view])
 
             buildAPIBtn.click(
                 buildAPI,

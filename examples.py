@@ -45,4 +45,14 @@ from [sales].[orders] inner join [sales].[stores] on (stores.store_id = orders.s
         "- The API is of type `CUSTOMSQL` created using the requirement as below:\n"
         "Get me all [sales].[orders] along with the store name. Stores are available in [sales].[stores] table. do not add a semicolon at the end of the customsql."
     ),
+    (
+        "- I want to build an API located in `demo_org_001` under the app `demo_app_001` for the datasource `demo_ds_001`. \n"
+        "- You must name the API as `get_sales_orders_for_my_region`. \n"
+        "- set datasecurityfilter to state in ( %(PROFILE:region)% )"
+        "- The API is of type `CUSTOMSQL` created using the requirement as below:\n"
+        "Get me all [sales].[orders] along with the store name and state (field `state`) from the stores table. \n"
+        "Stores are available in [sales].[stores] table with primary key as `store_id`. \n"
+        "do not add a semicolon at the end of the customsql.\n"
+        "do not add the data security filter in the customsql.\n"
+    ),
 ]
