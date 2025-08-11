@@ -30,6 +30,7 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 
+
 def refreshData(api_url_markdown):
     print("api_url = ", api_url_markdown)
     # Regex pattern to capture the URL part of a Markdown link
@@ -40,12 +41,18 @@ def refreshData(api_url_markdown):
 
     if match:
         url = match.group(1)
-        print(url)    
+        print(url)
         abstractaClient = AbstractaClient()
-        data = abstractaClient.get_data_from_api_url(access_token=abstractaClient.perform_auth(), api_url=url)
-        return [gr.update(value=pandas.DataFrame(data), visible=True),gr.update(value=data, visible=False)]
+        data = abstractaClient.get_data_from_api_url(
+            access_token=abstractaClient.perform_auth(), api_url=url
+        )
+        return [
+            gr.update(value=pandas.DataFrame(data), visible=True),
+            gr.update(value=data, visible=False),
+        ]
     else:
         raise Exception("No API url defined!")
+
 
 async def typewriter_effect(example_text):
     """Yields text one character at a time to simulate typing."""
@@ -162,19 +169,26 @@ def render():
                         label="Describe your requirement",
                     )
 
-                    with gr.Row():
-                        for idx, ex in enumerate(examples):
-                            # Use partial application so we can pass args to an async generator
-                            def make_handler(text):
-                                async def handler():
-                                    async for val in typewriter_effect(text):
-                                        yield val
+                    
+                    for idx, category in enumerate(examples):
+                        # Use partial application so we can pass args to an async generator
+                        def make_handler(text):
+                            async def handler():
+                                async for val in typewriter_effect(text):
+                                    yield val
 
-                                return handler
+                            return handler
 
-                            gr.Button(f"💡 Example#{idx+1}", variant="secondary").click(
-                                fn=make_handler(ex), inputs=[], outputs=requirements
-                            )
+                        with gr.Accordion(label=category["category"], open=False):
+                            with gr.Row():
+                                for ex in category["examples"]:
+                                    gr.Button(
+                                        f"💡 {ex['name']}", variant="secondary"
+                                    ).click(
+                                        fn=make_handler(ex["description"]),
+                                        inputs=[],
+                                        outputs=requirements,
+                                    )
 
                     with gr.Row():
                         buildAPIBtn = gr.Button(
@@ -242,7 +256,9 @@ def render():
                         None,
                         [dataframe_view, json_view, btn_df, btn_json],
                     )
-                    btn_refresh.click(refreshData,[api_url],[dataframe_view, json_view])
+                    btn_refresh.click(
+                        refreshData, [api_url], [dataframe_view, json_view]
+                    )
 
             buildAPIBtn.click(
                 buildAPI,
